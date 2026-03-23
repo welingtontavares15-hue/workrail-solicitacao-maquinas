@@ -1193,6 +1193,9 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
             <button class="btn-primary" onclick="abrirModalNovoUsuario()">
               <svg viewBox="0 0 13 13" fill="none" style="width:11px;height:11px;margin-right:5px"><path d="M6.5 2v9M2 6.5h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Novo Usuário
             </button>
+            <button class="btn btn-clear" onclick="criarPrimeiroAdmin()" title="Criar PRIMEIRO administrador (use apenas UMA VEZ)">
+              👑 Criar Primeiro Admin
+            </button>
           </div>
           <div class="admin-table-wrap">
             <table class="admin-table">
@@ -2016,24 +2019,15 @@ async function carregarPerfilUsuario(firebaseUser) {
         return;
       }
     } else {
-      // Nenhum perfil encontrado — cria como 'vendas' com UID como ID
-      currentUser = {
-        uid:       firebaseUser.uid,
-        nome:      firebaseUser.displayName || firebaseUser.email,
-        email:     firebaseUser.email,
-        perfil:    'vendas',
-        fornecedor:null,
-        ativo:     true
-      };
-      await db.collection('usuarios').doc(firebaseUser.uid).set({
-        nome:       currentUser.nome,
-        email:      currentUser.email,
-        perfil:     'vendas',
-        fornecedor: null,
-        ativo:      true,
-        criadoEm:   firebase.firestore.FieldValue.serverTimestamp()
-      });
-      console.warn('[WORKRAIL] Nenhum perfil encontrado para', firebaseUser.email, '— criado como vendas.');
+      // ❌ SEGURANÇA: NÃO criar usuário automaticamente
+      // Usuários DEVEM ser pré-criados no painel Admin
+      await fazerLogout();
+      console.warn('[WORKRAIL] Usuário não encontrado no Firestore:', firebaseUser.email);
+      showToast(
+        '❌ Acesso negado: Seu usuário não foi criado no sistema.\n\nContate o administrador para criar sua conta no painel Admin.',
+        'error'
+      );
+      return;
     }
 
     // Oculta tela de login e configura interface
@@ -4365,6 +4359,65 @@ service cloud.firestore {
       fornecedor: "EBST" | "Hobart Brasil" | null
       ativo:      true
    ════════════════════════════════════════════════════════════ */
+
+// ════════════════════════════════════════════════════════════
+// FUNÇÃO ESPECIAL: CRIAR PRIMEIRO ADMIN
+// ════════════════════════════════════════════════════════════
+// Usar APENAS para criar primeiro administrador
+// Após criar, remover ou comentar esta função
+
+async function criarPrimeiroAdmin() {
+  const email = prompt('E-mail do primeiro administrador:');
+  if (!email) return;
+  const senha = prompt('Senha (mín. 6 caracteres):');
+  if (!senha || senha.length < 6) {
+    alert('Senha deve ter no mínimo 6 caracteres');
+    return;
+  }
+  const nome = prompt('Nome completo:');
+  if (!nome) return;
+
+  if (!confirm(`Criar ADMIN:\n${nome}\n${email}\n\nConfirmar?`)) return;
+
+  try {
+    console.log('[WORKRAIL] Criando PRIMEIRO ADMIN...');
+
+    // App secundário para não deslogar sessão atual
+    const app = firebase.initializeApp(FIREBASE_CONFIG, 'firstAdmin_' + Date.now());
+    const authApp = app.auth();
+
+    // Criar user Firebase Auth
+    const cred = await authApp.createUserWithEmailAndPassword(email, senha);
+    const uid = cred.user.uid;
+    await cred.user.updateProfile({ displayName: nome });
+
+    // Deslogar app secundário
+    await authApp.signOut();
+    await app.delete();
+
+    // Criar documento Firestore com super_admin
+    await db.collection('usuarios').doc(uid).set({
+      uid: uid,
+      nome: nome,
+      email: email,
+      perfil: 'super_admin',
+      fornecedor: null,
+      ativo: true,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      criadoPor: 'SISTEMA'
+    });
+
+    alert(`✅ ADMIN CRIADO COM SUCESSO!\n\nUID: ${uid}\nE-mail: ${email}\nSenha: [a que você digitou]\n\nFaça login agora.`);
+    console.log('[WORKRAIL] ADMIN criado com UID:', uid);
+
+  } catch(e) {
+    console.error('[WORKRAIL] Erro ao criar ADMIN:', e);
+    alert('❌ Erro: ' + e.message);
+  }
+}
+
+// ── Para chamar no console do navegador:
+// criarPrimeiroAdmin()
 </script>
 </body>
 </html>
