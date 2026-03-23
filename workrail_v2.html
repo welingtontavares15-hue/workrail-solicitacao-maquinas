@@ -1462,6 +1462,13 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
               <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3.5 5h6M3.5 7h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Justificativa</span></div>
               <div class="fc-body c1"><div class="field"><label>Observações do Gestor <span class="req">*</span></label><textarea placeholder="Descreva o motivo da aprovação ou rejeição. Campo obrigatório para rejeições."></textarea></div></div>
             </div>
+            <div class="fcard">
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M2 2h9v9H2zM4.5 5.5l1.5 1.5 2.5-2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fc-title">Checklist de Instalação <span class="req">*</span></span></div>
+              <div class="fc-body c1">
+                <div class="alert a-info" style="margin-bottom:8px"><svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7v3.5M7.5 5.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span>Obrigatório para aprovação. Anexe o checklist de instalação preenchido e assinado.</span></div>
+                <div class="field"><label>Checklist de Instalação <span class="req">*</span></label><label class="file-drop" id="fChecklist"><input type="file" accept=".pdf,.doc,.docx,.jpg,.png" onchange="setFile(this,'fChecklist','fChecklistA')"><svg viewBox="0 0 18 18" fill="none"><path d="M9 4v8M5 8l4-4 4 4M3 14h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Anexar checklist de instalação</span></label><div class="file-attached" id="fChecklistA"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1"/><path d="M8 1v3h3" stroke="currentColor" stroke-width="1"/></svg><span></span></div></div>
+              </div>
+            </div>
           </div>
           <div class="action-bar"><div class="ab-left"><button class="btn btn-back" onclick="go('solicitacao')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div></div>
         </div>
@@ -1761,7 +1768,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
 <div id="mInstalacao" class="modal-overlay"><div class="modal m-advance"><h3>Agendar Instalação?</h3><p>O Supervisor Técnico será notificado por e-mail para confirmar data e equipe com o cliente.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mInstalacao')">Cancelar</button><button class="btn btn-advance" onclick="confirmAgendarInstalacao()">Confirmar</button></div></div></div>
 <div id="mRelatorio" class="modal-overlay"><div class="modal m-advance"><h3>Confirmar Agendamento?</h3><p>Confirme que a data, horário e técnico estão corretos. O processo avançará para o anexo do relatório final.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mRelatorio')">Cancelar</button><button class="btn btn-advance" onclick="confirmIniciarRelatorio()">Avançar</button></div></div></div>
 <div id="mConcluir" class="modal-overlay"><div class="modal m-approve"><h3>Encerrar Processo?</h3><p>O processo será encerrado definitivamente. Relatório assinado e checklist devem estar anexados. ADM e Gestor serão notificados.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mConcluir')">Cancelar</button><button class="btn btn-conclude" onclick="confirmConcluir()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Encerrar</button></div></div></div>
-<div id="mSuccess" class="modal-overlay"><div class="modal m-approve" style="text-align:center;padding:32px 24px"><div style="width:58px;height:58px;border-radius:50%;background:#e8f5e9;border:2px solid #a5d6a7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px">✓</div><h3 style="font-size:17px;margin-bottom:8px">Processo Concluído!</h3><p>Todos os documentos foram registrados e as partes notificadas.</p><div style="margin:14px 0 18px;padding:10px;background:#e8f5e9;border-radius:6px;font-size:11.5px;color:#2e7d32;font-family:'DM Mono',monospace">Protocolo: WR-2025-0847 · 20/06/2025</div><button class="btn btn-secondary" onclick="closeMod('mSuccess');goPage('home')">Voltar ao Início</button></div></div>
+<div id="mSuccess" class="modal-overlay"><div class="modal m-approve" style="text-align:center;padding:32px 24px"><div style="width:58px;height:58px;border-radius:50%;background:#e8f5e9;border:2px solid #a5d6a7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px">✓</div><h3 style="font-size:17px;margin-bottom:8px">Processo Concluído!</h3><p>Todos os documentos foram registrados e as partes notificadas.</p><div id="mSuccess-info" style="margin:14px 0 18px;padding:10px;background:#e8f5e9;border-radius:6px;font-size:11.5px;color:#2e7d32;font-family:'DM Mono',monospace">—</div><button class="btn btn-secondary" onclick="closeMod('mSuccess');goPage('home')">Voltar ao Início</button></div></div>
 <div id="mPendentes" class="modal-overlay"><div class="modal m-advance" style="width:520px;max-width:95vw"><h3>Pendentes de Aprovação</h3><p style="margin-bottom:14px">3 solicitações aguardam parecer do Gestor de Vendas.</p><div id="pendList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px"></div><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mPendentes')">Fechar</button></div></div></div>
 
 <script>
@@ -1774,7 +1781,7 @@ const FIREBASE_CONFIG = {
   apiKey:            "AIzaSyBp_eQlXyDcvGbKP8AX3MbTIUKT3VaXxfE",
   authDomain:        "workrail-solenis.firebaseapp.com",
   projectId:         "workrail-solenis",
-  storageBucket:     "workrail-solenis.firebasestorage.app",
+  storageBucket:     "workrail-solenis.appspot.com",
   messagingSenderId: "204626918677",
   appId:             "1:204626918677:web:324d2ab04663a32a14bd1c"
 };
@@ -1853,13 +1860,16 @@ let visitedFlow = new Set();
 function initFirebase() {
   try {
     if (typeof firebase === 'undefined') {
-      console.warn('[WORKRAIL] Firebase SDK não carregado. Modo offline ativo.');
-      mostrarAppSemLogin('super_admin');
+      // SEGURANÇA: SDK não carregado — mantém tela de login visível, nunca concede acesso
+      console.error('[WORKRAIL] Firebase SDK não carregado. Acesso bloqueado.');
+      showToast('Erro: Firebase indisponível. Verifique sua conexão e recarregue a página.', 'error');
+      // login-overlay permanece visível (estado padrão) — nenhum acesso concedido
       return;
     }
     if (FIREBASE_CONFIG.apiKey === 'SUA_API_KEY_AQUI') {
-      console.warn('[WORKRAIL] Firebase não configurado. Modo offline ativo.');
-      mostrarAppSemLogin('super_admin');
+      // Modo desenvolvimento: Firebase não configurado — acesso demo com privilégio mínimo
+      console.warn('[WORKRAIL] Firebase não configurado. Modo desenvolvimento ativo (somente leitura).');
+      mostrarAppSemLogin('vendas'); // privilégio mínimo em modo dev, nunca super_admin
       return;
     }
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -1882,8 +1892,10 @@ function initFirebase() {
     });
 
   } catch(e) {
-    console.error('[WORKRAIL] Erro ao inicializar Firebase:', e);
-    mostrarAppSemLogin('super_admin');
+    // SEGURANÇA: falha na inicialização — mantém tela de login visível, nunca concede acesso
+    console.error('[WORKRAIL] Erro crítico ao inicializar Firebase:', e);
+    showToast('Erro ao conectar com o servidor. Tente recarregar a página.', 'error');
+    // login-overlay permanece visível — nenhum acesso concedido
   }
 }
 
@@ -1962,16 +1974,39 @@ async function fazerLogout() {
 
 async function carregarPerfilUsuario(firebaseUser) {
   try {
-    // Tenta carregar perfil da coleção 'usuarios'
-    const doc = await db.collection('usuarios').doc(firebaseUser.uid).get();
+    // 1ª tentativa: busca pelo UID como ID do documento (criação via admin panel)
+    let docRef  = await db.collection('usuarios').doc(firebaseUser.uid).get();
+    let data    = null;
+    let docId   = firebaseUser.uid;
 
-    if (doc.exists) {
-      const data = doc.data();
+    if (docRef.exists) {
+      data = docRef.data();
+    } else {
+      // 2ª tentativa: busca pelo campo email (documentos criados manualmente no Console)
+      const snap = await db.collection('usuarios')
+        .where('email', '==', firebaseUser.email)
+        .limit(1).get();
+
+      if (!snap.empty) {
+        const found = snap.docs[0];
+        data  = found.data();
+        docId = found.id;
+        // Migra o documento para usar o UID como ID (garante consistência futura)
+        await db.collection('usuarios').doc(firebaseUser.uid).set({
+          ...data,
+          uid: firebaseUser.uid,
+          migradoEm: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('[WORKRAIL] Perfil migrado para UID:', firebaseUser.uid);
+      }
+    }
+
+    if (data) {
       currentUser = {
         uid:       firebaseUser.uid,
-        nome:      data.nome      || firebaseUser.displayName || firebaseUser.email,
+        nome:      data.nome       || firebaseUser.displayName || firebaseUser.email,
         email:     firebaseUser.email,
-        perfil:    data.perfil    || 'vendas',
+        perfil:    data.perfil     || 'vendas',
         fornecedor:data.fornecedor || null,
         ativo:     data.ativo !== false
       };
@@ -1981,7 +2016,7 @@ async function carregarPerfilUsuario(firebaseUser) {
         return;
       }
     } else {
-      // Usuário autenticado mas sem perfil no Firestore — cria perfil padrão
+      // Nenhum perfil encontrado — cria como 'vendas' com UID como ID
       currentUser = {
         uid:       firebaseUser.uid,
         nome:      firebaseUser.displayName || firebaseUser.email,
@@ -1993,11 +2028,12 @@ async function carregarPerfilUsuario(firebaseUser) {
       await db.collection('usuarios').doc(firebaseUser.uid).set({
         nome:       currentUser.nome,
         email:      currentUser.email,
-        perfil:     currentUser.perfil,
+        perfil:     'vendas',
         fornecedor: null,
         ativo:      true,
         criadoEm:   firebase.firestore.FieldValue.serverTimestamp()
       });
+      console.warn('[WORKRAIL] Nenhum perfil encontrado para', firebaseUser.email, '— criado como vendas.');
     }
 
     // Oculta tela de login e configura interface
@@ -2007,7 +2043,6 @@ async function carregarPerfilUsuario(firebaseUser) {
 
   } catch(e) {
     console.error('[WORKRAIL] Erro ao carregar perfil:', e);
-    // Fallback — usa informações básicas do Firebase Auth
     currentUser = {
       uid:       firebaseUser.uid,
       nome:      firebaseUser.displayName || firebaseUser.email,
@@ -2135,10 +2170,24 @@ async function uploadMultiplos(campos, pasta) {
 // ════════════════════════════════════════════════════════════
 // FIREBASE — FIRESTORE (CRUD)
 // ════════════════════════════════════════════════════════════
-function gerarProtocolo() {
+async function gerarProtocolo() {
   const ano = new Date().getFullYear();
-  const seq = String(Math.floor(Math.random() * 9000) + 1000);
-  return `WR-${ano}-${seq}`;
+  if (db) {
+    try {
+      const counterRef = db.collection('contadores').doc('protocolos_' + ano);
+      const seq = await db.runTransaction(async t => {
+        const doc = await t.get(counterRef);
+        const atual = doc.exists ? (doc.data().ultimo || 0) : 0;
+        t.set(counterRef, { ultimo: atual + 1, ano });
+        return atual + 1;
+      });
+      return `WR-${ano}-${String(seq).padStart(4, '0')}`;
+    } catch(e) {
+      console.warn('[WORKRAIL] Contador offline — protocolo com timestamp:', e);
+    }
+  }
+  // Fallback offline: timestamp para evitar colisão
+  return `WR-${ano}-${Date.now().toString().slice(-6)}`;
 }
 
 function entradaHistorico(acao, responsavel, etapa, observacao) {
@@ -2153,7 +2202,7 @@ function entradaHistorico(acao, responsavel, etapa, observacao) {
 }
 
 async function criarSolicitacao(dados) {
-  const protocolo = gerarProtocolo();
+  const protocolo = await gerarProtocolo();
   const doc = {
     protocolo,
     ...dados,
@@ -2234,9 +2283,11 @@ async function carregarHistoricoFirebase() {
 
     const snap = await query.get();
     if (snap.empty) {
-      // Mantém dados estáticos de demonstração
+      // Firebase conectado mas sem dados reais — limpa array de demo e mostra estado vazio
+      HISTORY.splice(0);
       buildHistoryTable();
       buildFilters();
+      buildSbHistory();
       return;
     }
     const rows = snap.docs.map(d => {
@@ -2270,8 +2321,9 @@ async function carregarHistoricoFirebase() {
 // ════════════════════════════════════════════════════════════
 async function enviarNotificacao(destinatario, assunto, mensagem, protocolo, detalhes) {
   // Notificações são OPCIONAIS — falha silenciosa, não interrompe o fluxo
-  if (!FORMSUBMIT_EMAIL || FORMSUBMIT_EMAIL === 'welingtontavares15@gmail.com') {
-    console.warn('[WORKRAIL] FormSubmit não configurado — notificação será ignorada');
+  const placeholders = ['SEU_EMAIL_AQUI', 'EMAIL_AQUI', '', null, undefined];
+  if (!destinatario || placeholders.includes(FORMSUBMIT_EMAIL)) {
+    console.warn('[WORKRAIL] FormSubmit não configurado ou destinatário inválido — notificação ignorada');
     return; // Não trava o fluxo
   }
   try {
@@ -2365,6 +2417,11 @@ function validateStep_Gestor(tipo) {
   const obs = document.querySelector('#screen-gestor textarea')?.value?.trim();
   if (!obs) {
     showToast('Observações do Gestor são obrigatórias antes de prosseguir.', 'error');
+    return false;
+  }
+  // Checklist obrigatório somente na aprovação (fluxo segue para ADM)
+  if (tipo === 'aprovar' && !arquivoAnexado('fChecklist')) {
+    showToast('Anexe o Checklist de Instalação antes de aprovar. (campo obrigatório)', 'error');
     return false;
   }
   return true;
@@ -2601,6 +2658,11 @@ async function confirmAprovar() {
   try {
     const obs = document.querySelector('#screen-gestor textarea')?.value?.trim();
 
+    // Upload obrigatório: checklist de instalação
+    const uploadsChecklist = await uploadMultiplos(
+      [['fChecklist','CHECKLIST_INSTALACAO']], 'checklists'
+    );
+
     // Recuperar o Nº do Pedido gerado na abertura da solicitação
     const numPedido = currentSolicitacao?.dadosAdm?.numeroPedido
                    || document.getElementById('numeroPedidoSolic')?.value
@@ -2612,6 +2674,13 @@ async function confirmAprovar() {
       { 'parecerGestor.decisao':'APROVADO', 'parecerGestor.observacoes':obs, 'dadosAdm.numeroPedido': numPedido },
       STATUS.APROVADO_GESTOR.key, 'adm', hist
     );
+
+    // Registrar checklist no histórico de documentos
+    if (uploadsChecklist.length > 0) {
+      await adicionarDocumentos(currentSolicitacaoId,
+        uploadsChecklist.map(u => ({ ...u, etapa:'gestor', responsavel: currentUser?.nome || 'Gestor' })));
+    }
+
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.adm,
       'Solicitação Aprovada — Revisão Contratual',
@@ -3182,7 +3251,13 @@ function openPendentes(){
 // ─── MODALS ─────────────────────────────────────────────────
 function showMod(id){document.getElementById(id).classList.add('open')}
 function closeMod(id){document.getElementById(id).classList.remove('open')}
-function showSuccess(){showMod('mSuccess')}
+function showSuccess(){
+  const prot = currentSolicitacao?.protocolo || '—';
+  const data = new Date().toLocaleDateString('pt-BR');
+  const infoEl = document.getElementById('mSuccess-info');
+  if (infoEl) infoEl.textContent = `Protocolo: ${prot} · ${data}`;
+  showMod('mSuccess');
+}
 document.querySelectorAll('.modal-overlay').forEach(el=>{
   el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')});
 });
@@ -3192,10 +3267,14 @@ function buildSbHistory(){
   const el=document.getElementById('sbHistList');
   if(!el) return;
   const recent=HISTORY.slice(0,4);
+  if(recent.length===0){
+    el.innerHTML=`<div style="text-align:center;padding:16px 8px;color:var(--text-muted);font-size:12px">Nenhuma solicitação registrada.</div>`;
+    return;
+  }
   el.innerHTML=recent.map(h=>`
     <div class="sb-hist-item" onclick="goPage('historico')">
       <div class="sh-row">
-        <div class="sh-code">${h.code.replace('WR-2025-','#')}</div>
+        <div class="sh-code">${h.code.replace(/WR-\d{4}-/,'#')}</div>
         <div class="sh-chip chip ${h.status}" style="font-size:9px;padding:1px 5px">${h.statusTxt}</div>
       </div>
       <div class="sh-name">${h.client}</div>
@@ -3292,6 +3371,13 @@ function buildHistoryTable(){
     const map={'Concluído':'c-done','Em andamento':'c-transit','Ag. aprovação':'c-pending','Em Trânsito':'c-transit','Reprovado':'c-rejected'};
     return h.status===map[activeFilter]||h.statusTxt.toLowerCase().includes(activeFilter.toLowerCase());
   });
+  if(data.length===0){
+    body.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px">
+      <svg viewBox="0 0 24 24" fill="none" style="width:28px;height:28px;display:block;margin:0 auto 8px;opacity:.4"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Nenhuma solicitação encontrada${activeFilter!=='Todos'?' para o filtro "'+activeFilter+'"':''}.
+    </td></tr>`;
+    return;
+  }
   body.innerHTML=data.map(h=>`
     <tr onclick="goPage('historico')">
       <td><span class="ht-code">${h.code}</span></td>
@@ -3896,15 +3982,33 @@ async function salvarUsuarioAdmin() {
     btn.disabled = true; btn.textContent = 'Salvando...';
 
     if (!uid) {
-      // Criar novo usuário via Firebase Auth (requer Admin SDK — aqui salvamos no Firestore como pendente)
+      // Criar novo usuário via Firebase Auth usando app secundário (não desloga o admin)
       if (!senha || senha.length < 6) { erroEl.textContent = 'Senha deve ter no mínimo 6 caracteres.'; erroEl.style.display = ''; btn.disabled=false; btn.textContent='Criar Usuário'; return; }
-      // Cria usuário via Auth
-      const cred = await firebase.auth().createUserWithEmailAndPassword(email, senha);
-      await cred.user.updateProfile({ displayName: nome });
-      await db.collection('usuarios').doc(cred.user.uid).set({
-        nome, email, perfil, fornecedor, ativo: true, criadoEm: firebase.firestore.FieldValue.serverTimestamp(), criadoPor: currentUser?.uid || 'admin'
-      });
-      showToast('Usuário criado com sucesso!', 'success');
+      try {
+        // App secundário temporário para criar usuário sem afetar sessão do admin
+        const appSecundario = firebase.initializeApp(FIREBASE_CONFIG, 'adminCreation_' + Date.now());
+        const authSecundario = appSecundario.auth();
+        const cred = await authSecundario.createUserWithEmailAndPassword(email, senha);
+        await cred.user.updateProfile({ displayName: nome });
+        const novoUid = cred.user.uid;
+        // Loga fora do app secundário imediatamente
+        await authSecundario.signOut();
+        await appSecundario.delete();
+        // Salva o perfil no Firestore com o UID correto como ID do documento
+        await db.collection('usuarios').doc(novoUid).set({
+          uid: novoUid, nome, email, perfil, fornecedor: fornecedor || null,
+          ativo: true,
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+          criadoPor: currentUser?.uid || 'admin'
+        });
+        showToast('Usuário criado com sucesso!', 'success');
+      } catch(eCreate) {
+        const erros = { 'auth/email-already-in-use':'E-mail já cadastrado.', 'auth/invalid-email':'E-mail inválido.', 'auth/weak-password':'Senha muito fraca (mín. 6 caracteres).' };
+        erroEl.textContent = erros[eCreate.code] || ('Erro ao criar: ' + eCreate.message);
+        erroEl.style.display = '';
+        btn.disabled = false; btn.textContent = 'Criar Usuário';
+        return;
+      }
     } else {
       // Editar existente (apenas dados no Firestore; senha via reset)
       await db.collection('usuarios').doc(uid).update({ nome, perfil, fornecedor });
