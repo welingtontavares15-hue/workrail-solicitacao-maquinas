@@ -2302,25 +2302,15 @@ function lerInput(seletor) {
   return el ? el.value.trim() : '';
 }
 
+// Validação flexível de CNPJ — aceita com ou sem formatação
+// Não faz validação de dígito verificador (pode ser preenche direto)
 function validarCNPJ(cnpj) {
-  cnpj = cnpj.replace(/\D/g,'');
-  if (cnpj.length !== 14) return false;
-  if (/^(\d)\1+$/.test(cnpj)) return false;
-  let sum = 0;
-  let pos = cnpj.length - 7;
-  for (let i = cnpj.length - 1; i >= 1; i--) {
-    sum += parseInt(cnpj.charAt(cnpj.length - i)) * pos--;
-    if (pos < 2) pos = 9;
-  }
-  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (result !== parseInt(cnpj.charAt(12))) return false;
-  sum = 0; pos = cnpj.length - 6;
-  for (let i = cnpj.length - 1; i >= 1; i--) {
-    sum += parseInt(cnpj.charAt(cnpj.length - i)) * pos--;
-    if (pos < 2) pos = 9;
-  }
-  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  return result === parseInt(cnpj.charAt(13));
+  if (!cnpj || typeof cnpj !== 'string') return false;
+  // Remove tudo que não é dígito
+  const apenas_digitos = cnpj.replace(/\D/g, '');
+  // Aceita qualquer coisa com 14 dígitos (formatado ou não)
+  // Exemplos: "12.345.678/0001-99" ou "12345678000199" — ambos ok
+  return apenas_digitos.length === 14;
 }
 
 function arquivoAnexado(dropId) {
