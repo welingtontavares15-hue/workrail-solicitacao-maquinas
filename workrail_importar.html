@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WORKRAIL — Importar Histórico de Máquinas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#0e7b82;--teal-dark:#075a60;--teal-mid:#1a9199;
+  --teal-light:#e0f4f5;--teal-xlight:#f0fafb;
+  --navy:#1a1a2e;
+  --white:#fff;--off:#f4f6f8;--off2:#e8edf2;
+  --text:#1a2b3c;--text-mid:#455a64;--text-muted:#78909c;
+  --border:#cfd8dc;--input-border:#b0bec5;
+  --red:#c62828;--red-l:#ffebee;
+  --green:#2e7d32;--green-l:#e8f5e9;
+  --amber:#e65100;--amber-l:#fff3e0;
+  --radius:4px;--radius-lg:6px;--radius-xl:10px;
+}
+html,body{min-height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:var(--text)}
+
+.shell{max-width:1100px;margin:0 auto;background:#fff;min-height:100vh;
+  box-shadow:0 0 40px rgba(0,0,0,.15)}
+
+/* TOPBAR */
+.topbar{height:50px;background:var(--navy);display:flex;align-items:center;padding:0 24px;gap:12px}
+.tb-logo{display:flex;align-items:center;gap:10px}
+.tb-mark{width:28px;height:28px;border-radius:7px;background:var(--teal);display:flex;align-items:center;justify-content:center}
+.tb-mark svg{width:15px;height:15px}
+.tb-text{font-size:14px;font-weight:700;color:#fff}
+.tb-text span{font-weight:300;opacity:.6;font-size:11px;display:block;line-height:1;margin-top:1px}
+.tb-sep{width:1px;height:24px;background:rgba(255,255,255,.12)}
+.tb-page{font-size:12px;color:rgba(255,255,255,.6)}
+.tb-badge{margin-left:auto;font-size:10px;color:rgba(255,255,255,.35);
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  padding:2px 10px;border-radius:10px;font-family:'DM Mono',monospace}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--teal-dark),var(--teal-mid));
+  padding:32px 36px;display:flex;align-items:flex-end;gap:24px}
+.hero-icon{width:52px;height:52px;border-radius:12px;background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hero-icon svg{width:26px;height:26px}
+.hero-body{}
+.hero-title{font-size:22px;font-weight:700;color:#fff;line-height:1.1}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.65);margin-top:5px}
+.hero-chips{display:flex;gap:8px;margin-top:10px}
+.hero-chip{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  padding:3px 10px;border-radius:10px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8)}
+
+/* BODY */
+.body{padding:28px 36px;display:flex;flex-direction:column;gap:20px}
+
+/* STEPS */
+.steps-bar{display:flex;gap:0;background:var(--off);border-radius:var(--radius-xl);overflow:hidden;
+  border:1px solid var(--border)}
+.step-item{flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;
+  border-right:1px solid var(--border);position:relative}
+.step-item:last-child{border-right:none}
+.step-item.active{background:var(--teal-xlight)}
+.step-item.done{background:var(--green-l)}
+.step-num{width:24px;height:24px;border-radius:50%;
+  background:var(--border);color:var(--text-muted);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0}
+.step-item.active .step-num{background:var(--teal);color:#fff}
+.step-item.done .step-num{background:var(--green);color:#fff}
+.step-label{font-size:12px;font-weight:500;color:var(--text-muted)}
+.step-item.active .step-label{color:var(--teal-dark);font-weight:600}
+.step-item.done .step-label{color:var(--green)}
+
+/* CARD */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;background:var(--off)}
+.card-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+.card-icon svg{width:16px;height:16px}
+.card-title{font-size:13px;font-weight:600;color:var(--text)}
+.card-sub{font-size:11.5px;color:var(--text-muted);margin-top:1px}
+.card-body{padding:18px}
+.card-right{margin-left:auto;display:flex;gap:8px}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:10.5px;font-weight:700;color:var(--text-mid);
+  text-transform:uppercase;letter-spacing:.07em}
+.field input,.field select,.field textarea{
+  height:36px;border:1px solid var(--input-border);border-radius:var(--radius);
+  padding:0 10px;font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif;
+  outline:none;transition:border-color .15s,box-shadow .15s;background:#fff}
+.field textarea{height:auto;padding:8px 10px;resize:vertical}
+.field input:focus,.field select:focus{border-color:var(--teal);box-shadow:0 0 0 2px rgba(14,123,130,.1)}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
+.s2{grid-column:span 2}
+.s3{grid-column:span 3}
+.s4{grid-column:span 4}
+
+/* BUTTONS */
+.btn{height:38px;padding:0 18px;border-radius:var(--radius-lg);font-size:13px;
+  font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;
+  display:inline-flex;align-items:center;gap:7px;transition:opacity .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn svg{width:14px;height:14px;flex-shrink:0}
+.btn-primary{background:var(--teal-dark);color:#fff}
+.btn-primary:hover{background:var(--teal)}
+.btn-secondary{background:var(--off);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--off2)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#1b5e20}
+.btn-sm{height:30px;padding:0 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* FILE DROP ZONE */
+.file-zone{
+  border:2px dashed var(--border);border-radius:var(--radius-xl);
+  padding:32px;text-align:center;cursor:pointer;
+  transition:border-color .15s,background .15s;background:var(--off);
+}
+.file-zone:hover,.file-zone.drag{border-color:var(--teal);background:var(--teal-xlight)}
+.file-zone input{display:none}
+.fz-icon{width:44px;height:44px;border-radius:50%;background:var(--teal-light);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.fz-icon svg{width:22px;height:22px;color:var(--teal)}
+.fz-title{font-size:14px;font-weight:600;color:var(--text)}
+.fz-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.fz-accepted{font-size:10.5px;color:var(--text-muted);margin-top:8px;
+  background:var(--off2);border-radius:20px;padding:3px 12px;display:inline-block}
+.fz-loaded{border-color:var(--teal);background:var(--teal-xlight)}
+.fz-loaded .fz-icon{background:var(--green-l)}
+.fz-loaded .fz-icon svg{color:var(--green)}
+.fz-filename{font-size:13px;font-weight:600;color:var(--teal-dark);margin-top:6px;
+  font-family:'DM Mono',monospace}
+
+/* PREVIEW TABLE */
+.preview-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg)}
+.preview-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.preview-table th{
+  padding:8px 10px;text-align:left;font-size:10px;font-weight:700;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;
+  background:var(--off);border-bottom:1px solid var(--border);white-space:nowrap}
+.preview-table td{
+  padding:7px 10px;border-bottom:1px solid #f0f4f7;color:var(--text);vertical-align:middle}
+.preview-table tr:last-child td{border-bottom:none}
+.preview-table tr:hover td{background:var(--teal-xlight)}
+.pt-code{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--teal-dark);font-weight:500}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;
+  border-radius:8px;font-size:9.5px;font-weight:700;white-space:nowrap}
+.c-done{background:#e8f5e9;color:#2e7d32}
+.c-import{background:#e3f2fd;color:#1565c0}
+.c-error{background:#ffebee;color:#c62828}
+.c-warn{background:#fff3e0;color:#e65100}
+
+/* PROGRESS */
+.progress-bar-wrap{background:var(--off2);border-radius:10px;height:8px;overflow:hidden}
+.progress-bar{height:100%;background:var(--teal);border-radius:10px;
+  transition:width .3s;width:0%}
+.log-area{background:#1a1a2e;border-radius:var(--radius-lg);padding:14px;
+  font-family:'DM Mono',monospace;font-size:11px;color:#7fdfe5;
+  max-height:220px;overflow-y:auto;line-height:1.7}
+.log-ok{color:#a5d6a7}
+.log-err{color:#ef9a9a}
+.log-info{color:#7fdfe5}
+.log-warn{color:#ffcc80}
+
+/* ALERT */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
+  border-radius:var(--radius-lg);font-size:12.5px;line-height:1.5}
+.alert svg{width:15px;height:15px;flex-shrink:0;margin-top:1px}
+.a-info{background:var(--teal-xlight);border:1px solid #b2dfdb;color:var(--teal-dark)}
+.a-warn{background:var(--amber-l);border:1px solid #ffcc80;color:var(--amber)}
+.a-ok{background:var(--green-l);border:1px solid #c8e6c9;color:var(--green)}
+.a-err{background:var(--red-l);border:1px solid #ffcdd2;color:var(--red)}
+
+/* SUMMARY CARDS */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.sum-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-xl);
+  padding:14px;text-align:center;border-top:3px solid var(--teal)}
+.sum-num{font-size:28px;font-weight:700;color:var(--teal-dark);line-height:1;
+  font-family:'DM Mono',monospace}
+.sum-lbl{font-size:10.5px;color:var(--text-muted);margin-top:4px;
+  text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+
+/* TEMPLATE */
+.template-card{background:var(--teal-xlight);border:1px solid #b2dfdb;
+  border-radius:var(--radius-xl);padding:16px 18px;display:flex;align-items:center;gap:14px}
+.template-icon{width:40px;height:40px;border-radius:8px;background:var(--teal-light);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.template-icon svg{width:20px;height:20px;color:var(--teal-dark)}
+.col-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.col-tag{font-size:10.5px;font-family:'DM Mono',monospace;color:var(--teal-dark);
+  background:var(--teal-light);border:1px solid #b2dfdb;border-radius:4px;padding:2px 7px}
+.col-tag.req{background:#e3f2fd;border-color:#90caf9;color:#1565c0}
+
+/* FIREBASE CONFIG */
+.cfg-box{background:var(--off);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:14px 16px;font-size:12px;line-height:1.7;font-family:'DM Mono',monospace;
+  color:var(--text-mid)}
+
+/* SECTION DIVIDER */
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;right:24px;
+  background:#1a2b3c;color:#fff;
+  padding:10px 16px;border-radius:var(--radius-lg);
+  font-size:13px;font-weight:500;
+  display:flex;align-items:center;gap:8px;
+  transform:translateY(80px);opacity:0;
+  transition:transform .25s,opacity .25s;z-index:9999;
+  max-width:360px;box-shadow:0 4px 16px rgba(0,0,0,.2)
+}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-left:3px solid #66bb6a}
+.toast.err{border-left:3px solid #ef5350}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-logo">
+    <div class="tb-mark">
+      <svg viewBox="0 0 15 15" fill="none"><path d="M2 12V5l5.5-3.5L13 5v7l-5.5 3.5L2 12z" stroke="white" stroke-width="1.3"/><path d="M7.5 1.5V15M2 5l5.5 3 5.5-3" stroke="white" stroke-width="1" stroke-linecap="round"/></svg>
+    </div>
+    <div class="tb-text">WORKRAIL <span>AS&amp;TS · Diversey Brasil</span></div>
+  </div>
+  <div class="tb-sep"></div>
+  <span class="tb-page">Importar Histórico de Máquinas</span>
+  <span class="tb-badge">Ferramenta de Migração</span>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-icon">
+    <svg viewBox="0 0 26 26" fill="none" style="color:#fff">
+      <path d="M13 3L3 9v8l10 6 10-6V9L13 3z" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M13 3v18M3 9l10 6 10-6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="hero-body">
+    <div class="hero-title">Importar Histórico de Máquinas Instaladas</div>
+    <div class="hero-sub">Importe em lote todas as instalações já realizadas para o Firebase. Os registros serão criados como <strong style="color:#7fdfe5">Concluídos</strong> no sistema.</div>
+    <div class="hero-chips">
+      <span class="hero-chip">CSV ou Planilha</span>
+      <span class="hero-chip">Validação automática</span>
+      <span class="hero-chip">Preview antes de importar</span>
+      <span class="hero-chip">Rastreabilidade completa</span>
+    </div>
+  </div>
+</div>
+
+<div class="body">
+
+  <!-- STEPS -->
+  <div class="steps-bar">
+    <div class="step-item active" id="step-1">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-label">Configurar Firebase</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-2">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-label">Baixar Template</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-3">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-label">Carregar Arquivo</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-4">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-label">Revisar Dados</div>
+      </div>
+    </div>
+    <div class="step-item" id="step-5">
+      <div class="step-num">5</div>
+      <div>
+        <div class="step-label">Importar</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PASSO 1: FIREBASE ═══ -->
+  <div class="card" id="card-firebase">
+    <div class="card-head">
+      <div class="card-icon" style="background:#fff3e0"><svg viewBox="0 0 16 16" fill="#e65100"><path d="M3.4 13.4L5 6.2 2 8.5l1.4-5.2L6.6 5 8 .6l1.4 4.4 3.2-1.7L10 7.5l2.6 2.3-3.8.4-1.6 5-1.6-5-4.2-.4z"/></svg></div>
+      <div>
+        <div class="card-title">Passo 1 — Configurar Firebase</div>
+        <div class="card-sub">Cole as credenciais do seu projeto para conectar ao banco de dados</div>
+      </div>
+      <div class="card-right">
+        <span id="fb-status-badge" class="chip c-warn">Não configurado</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="alert a-info" style="margin-bottom:14px">
+        <svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7v3.5M7.5 5.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>Use as mesmas credenciais do arquivo <strong>workrail_v2.html</strong>. Acesse <strong>Firebase Console → Seu projeto → Configurações → Seus apps → Web</strong> e copie o objeto <code>firebaseConfig</code>.</span>
+      </div>
+      <div class="grid2" style="gap:10px">
+        <div class="field"><label>API Key <span style="color:red">*</span></label><input type="text" id="cfg-apiKey" placeholder="AIzaSy..."></div>
+        <div class="field"><label>Auth Domain <span style="color:red">*</span></label><input type="text" id="cfg-authDomain" placeholder="projeto.firebaseapp.com"></div>
+        <div class="field"><label>Project ID <span style="color:red">*</span></label><input type="text" id="cfg-projectId" placeholder="meu-projeto-id"></div>
+        <div class="field"><label>Storage Bucket</label><input type="text" id="cfg-storageBucket" placeholder="projeto.appspot.com"></div>
+        <div class="field"><label>Messaging Sender ID</label><input type="text" id="cfg-messagingSenderId" placeholder="123456789"></div>
+        <div class="field"><label>App ID <span style="color:red">*</span></label><input type="text" id="cfg-appId" placeholder="1:123456789:web:abc123"></div>
+      </div>
+      <div style="margin-top:14px;padding:14px;background:#f0fafb;border:1px solid #b2dfdb;border-radius:8px">
+        <div style="font-size:12.5px;font-weight:600;color:var(--teal-dark);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <svg viewBox="0 0 14 14" fill="none" style="width:13px;height:13px"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Vigência Padrão dos Contratos
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+          <div class="field" style="margin:0">
+            <label>Duração padrão do contrato (meses)</label>
+            <input type="number" id="cfg-vigencia-padrao" min="1" max="120" value="36"
+              placeholder="Ex: 36"
+              style="font-size:14px;font-weight:600;color:var(--teal-dark)">
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+              Aplica-se a todas as linhas do CSV que <strong>não tiverem</strong> a coluna <code>vigencia</code> preenchida.
+              Se cada máquina tiver um prazo diferente, preencha a coluna no CSV.
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-mid);padding:8px 10px;background:#fff;border-radius:6px;border:1px solid var(--border)">
+            <strong>Como funciona:</strong><br>
+            1. Se a linha do CSV tiver <code>vigencia</code> preenchida (ex: <em>"24 meses"</em>), usa esse valor.<br>
+            2. Se estiver vazia, usa a duração padrão definida aqui.<br>
+            3. O Dashboard usará essa informação para calcular a contagem regressiva.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button class="btn btn-primary" onclick="conectarFirebase()">
+          <svg viewBox="0 0 14 14" fill="none"><path d="M7 1L1 4v3c0 3 2.5 5.5 6 6 3.5-.5 6-3 6-6V4L7 1z" stroke="currentColor" stroke-width="1.2"/><path d="M5 7l1.5 1.5L9 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Conectar ao Firebase
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="colarConfigJson()">
+          <svg viewBox="0 0 13 13" fill="none"><rect x="2" y="2" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 2V1h3v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Colar JSON do Firebase
+        </button>
+        <span id="fb-connect-msg" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PASSO 2: TEMPLATE ═══ -->
+  <div class="card" id="card-template">
+    <div class="card-head">
+      <div class="card-icon" style="background:#e8f5e9"><svg viewBox="0 0 16 16" fill="none" style="color:#2e7d32"><path d="M3 2h7l4 4v8H3V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 2v4h4M5 9h6M5 11h6M5 7h3" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg></div>
+      <div>
+        <div class="card-title">Passo 2 — Baixar Template CSV</div>
+        <div class="card-sub">Preencha o modelo com os dados das máquinas já instaladas</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="template-card">
+        <div class="template-icon">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M4 2h9l4 4v12H4V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M13 2v4h4M6 9h8M6 11.5h8M6 14h5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--teal-dark)">Template oficial WORKRAIL — Importação de Máquinas</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Formato CSV com todas as colunas obrigatórias e exemplos preenchidos</div>
+          <div class="col-list">
+            <span class="col-tag req" title="Obrigatório">nomeCliente *</span>
+            <span class="col-tag req">shipTo *</span>
+            <span class="col-tag req">cnpj *</span>
+            <span class="col-tag req">modeloMaquina *</span>
+            <span class="col-tag req">tipoSolicitacao *</span>
+            <span class="col-tag req">dataInstalacao *</span>
+            <span class="col-tag" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7" title="Importante para contagem regressiva">vigencia ⭐</span>
+            <span class="col-tag">emailCliente</span>
+            <span class="col-tag">endereco</span>
+            <span class="col-tag">refeicoesDia</span>
+            <span class="col-tag">refeicoesHora</span>
+            <span class="col-tag">mesaNecessaria</span>
+            <span class="col-tag">detergente</span>
+            <span class="col-tag">secante</span>
+            <span class="col-tag">fornecedor</span>
+            <span class="col-tag">numeroNF</span>
+            <span class="col-tag">responsavel</span>
+            <span class="col-tag">observacoes</span>
+          </div>
+          <div style="margin-top:6px;font-size:10.5px;color:var(--text-muted)">
+            <span style="color:#1565c0;font-weight:600">Azul = obrigatório</span> &nbsp;·&nbsp; Cinza = opcional
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="baixarTemplate()">
+          <svg viewBox="0 0 14 14" fill="none"><path d="M7 2v8M4 8l3 3 3-3M2 12h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Baixar Template
+        </button>
+      </div>
+      <div class="alert a-warn" style="margin-top:12px">
+        <svg viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5L1 13h13L7.5 1.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7.5 6v3M7.5 11v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <div>
+          <strong>Dicas de preenchimento:</strong><br>
+          • <strong>vigencia</strong> ⭐: duração do contrato em meses (ex: <code>36</code> ou <code>36 meses</code>). Se deixar vazio, usa a <em>Vigência Padrão</em> configurada no Passo 1. Essencial para a contagem regressiva no Dashboard.<br>
+          • <strong>tipoSolicitacao</strong>: use exatamente <code>Instalação</code> ou <code>Desinstalação</code><br>
+          • <strong>dataInstalacao</strong>: formato DD/MM/AAAA (ex: 15/03/2025)<br>
+          • <strong>mesaNecessaria</strong>: use <code>Sim</code> ou <code>Não</code><br>
+          • <strong>fornecedor</strong>: use <code>Hobart Brasil</code> ou <code>EBST</code><br>
+          • Salve o arquivo como <strong>CSV (UTF-8)</strong> no Excel (Arquivo → Salvar como → CSV UTF-8)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PASSO 3: UPLOAD ═══ -->
+  <div class="card" id="card-upload">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--teal-light)"><svg viewBox="0 0 16 16" fill="none" style="color:var(--teal)"><path d="M8 3v8M5 6l3-3 3 3M2 12h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="card-title">Passo 3 — Carregar Arquivo CSV</div>
+        <div class="card-sub">Arraste ou selecione o CSV preenchido com as instalações</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <label class="file-zone" id="dropZone" for="fileInput"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleDrop(event)">
+        <input type="file" id="fileInput" accept=".csv,.txt" onchange="handleFile(this.files[0])">
+        <div class="fz-icon" id="fzIcon">
+          <svg viewBox="0 0 22 22" fill="none" style="color:var(--teal)"><path d="M11 4v12M7 10l4-4 4 4M3 17h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="fz-title" id="fzTitle">Clique ou arraste o arquivo CSV aqui</div>
+        <div class="fz-sub" id="fzSub">Suporte a .csv exportado do Excel ou Google Sheets</div>
+        <div class="fz-filename" id="fzFilename" style="display:none"></div>
+        <span class="fz-accepted">CSV · TXT · Separador: vírgula ou ponto-e-vírgula</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ═══ PASSO 4: PREVIEW ═══ -->
+  <div class="card" id="card-preview" style="display:none">
+    <div class="card-head">
+      <div class="card-icon" style="background:#e3f2fd"><svg viewBox="0 0 16 16" fill="none" style="color:#1565c0"><circle cx="8" cy="8" r="5" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg></div>
+      <div>
+        <div class="card-title">Passo 4 — Revisar Dados</div>
+        <div class="card-sub" id="preview-subtitle">0 registros encontrados</div>
+      </div>
+      <div class="card-right">
+        <button class="btn btn-secondary btn-sm" onclick="limparArquivo()">
+          <svg viewBox="0 0 13 13" fill="none"><path d="M2 2l9 9M11 2L2 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Remover arquivo
+        </button>
+      </div>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="summary-grid" id="previewStats"></div>
+      <div id="previewAlerts"></div>
+      <div class="preview-wrap">
+        <table class="preview-table" id="previewTable">
+          <thead id="previewHead"></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PASSO 5: IMPORTAR ═══ -->
+  <div class="card" id="card-import" style="display:none">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--green-l)"><svg viewBox="0 0 16 16" fill="none" style="color:var(--green)"><path d="M3 9l4 4L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div>
+        <div class="card-title">Passo 5 — Importar para o Firebase</div>
+        <div class="card-sub">Os registros serão criados como solicitações <strong>Concluídas</strong> na coleção <code>solicitacoes</code></div>
+      </div>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="alert a-ok">
+        <svg viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          Cada linha será importada como uma solicitação com status <strong>Concluído</strong>, com histórico de movimentação registrado e marcada como <strong>importado: true</strong> para rastreabilidade.
+          <br>A operação é <strong>segura e não duplica registros</strong> que já existam com o mesmo Ship To + Modelo + Data.
+        </div>
+      </div>
+      <div style="display:none" id="importProgress">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--text-mid)" id="progressLabel">Importando...</span>
+          <span style="font-size:12px;font-weight:600;color:var(--teal-dark);font-family:'DM Mono',monospace" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="log-area" id="logArea" style="margin-top:12px"></div>
+      </div>
+      <div id="importResult" style="display:none"></div>
+      <div style="display:flex;gap:10px" id="importBtns">
+        <button class="btn btn-green" id="btnImportar" onclick="iniciarImportacao()">
+          <svg viewBox="0 0 14 14" fill="none"><path d="M7 1L1 4v3c0 3 2.5 5.5 6 6 3.5-.5 6-3 6-6V4L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5 7l1.5 1.5L9 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Iniciar Importação
+        </button>
+        <button class="btn btn-secondary" onclick="limparArquivo()">Cancelar e Voltar</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /body -->
+</div><!-- /shell -->
+
+<!-- MODAL COLAR JSON -->
+<div id="modal-json" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:10px;padding:24px;width:540px;max-width:95vw">
+    <div style="font-size:14px;font-weight:600;margin-bottom:4px">Colar objeto firebaseConfig</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Cole o objeto JavaScript copiado do Firebase Console</div>
+    <textarea id="json-input" style="width:100%;height:180px;font-family:'DM Mono',monospace;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:10px;outline:none;resize:vertical" placeholder="const firebaseConfig = {
+  apiKey: &quot;AIzaSy...&quot;,
+  authDomain: &quot;...&quot;,
+  projectId: &quot;...&quot;,
+  ...
+};"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary btn-sm" onclick="parsearJsonConfig()">Aplicar</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-json').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let db = null;
+let parsedRows = [];
+let importando = false;
+
+// ════════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════════
+function toast(msg, tipo='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${tipo}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ════════════════════════════════════════════════════════════
+// STEPS
+// ════════════════════════════════════════════════════════════
+function setStep(n) {
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('step-'+i);
+    if (!el) continue;
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+    // check mark
+    el.querySelector('.step-num').textContent = i < n ? '✓' : i;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// FIREBASE
+// ════════════════════════════════════════════════════════════
+function colarConfigJson() {
+  document.getElementById('modal-json').style.display = 'flex';
+}
+
+function parsearJsonConfig() {
+  const raw = document.getElementById('json-input').value;
+  try {
+    // Extrai objeto JSON de dentro do código JS
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Objeto não encontrado');
+    // Converte para JSON válido (remove trailing commas, linhas de comentário)
+    let json = match[0]
+      .replace(/\/\/.*/g, '')               // remove comentários
+      .replace(/,\s*([\}\]])/g, '$1');       // remove trailing commas
+    const cfg = JSON.parse(json);
+    if (cfg.apiKey)            document.getElementById('cfg-apiKey').value = cfg.apiKey;
+    if (cfg.authDomain)        document.getElementById('cfg-authDomain').value = cfg.authDomain;
+    if (cfg.projectId)         document.getElementById('cfg-projectId').value = cfg.projectId;
+    if (cfg.storageBucket)     document.getElementById('cfg-storageBucket').value = cfg.storageBucket;
+    if (cfg.messagingSenderId) document.getElementById('cfg-messagingSenderId').value = cfg.messagingSenderId;
+    if (cfg.appId)             document.getElementById('cfg-appId').value = cfg.appId;
+    document.getElementById('modal-json').style.display = 'none';
+    toast('Configuração aplicada! Clique em Conectar.', 'ok');
+  } catch(e) {
+    toast('Erro ao parsear: ' + e.message, 'err');
+  }
+}
+
+async function conectarFirebase() {
+  const apiKey     = document.getElementById('cfg-apiKey').value.trim();
+  const authDomain = document.getElementById('cfg-authDomain').value.trim();
+  const projectId  = document.getElementById('cfg-projectId').value.trim();
+  const appId      = document.getElementById('cfg-appId').value.trim();
+
+  if (!apiKey || !projectId || !appId) {
+    toast('Preencha ao menos API Key, Project ID e App ID.', 'err');
+    return;
+  }
+
+  const msg = document.getElementById('fb-connect-msg');
+  msg.textContent = 'Conectando...';
+  msg.style.color = 'var(--text-muted)';
+
+  try {
+    // Destrói app existente se houver
+    try { firebase.app().delete(); } catch(e) {}
+
+    const config = {
+      apiKey,
+      authDomain:        document.getElementById('cfg-authDomain').value.trim(),
+      projectId,
+      storageBucket:     document.getElementById('cfg-storageBucket').value.trim(),
+      messagingSenderId: document.getElementById('cfg-messagingSenderId').value.trim(),
+      appId
+    };
+    firebase.initializeApp(config);
+    db = firebase.firestore();
+
+    // Testa conectividade
+    await db.collection('usuarios').limit(1).get();
+
+    document.getElementById('fb-status-badge').textContent = 'Conectado ✓';
+    document.getElementById('fb-status-badge').className = 'chip c-done';
+    msg.textContent = 'Conectado com sucesso!';
+    msg.style.color = 'var(--green)';
+    toast('Firebase conectado com sucesso!', 'ok');
+    setStep(2);
+  } catch(e) {
+    document.getElementById('fb-status-badge').textContent = 'Erro';
+    document.getElementById('fb-status-badge').className = 'chip c-error';
+    msg.textContent = 'Erro: ' + (e.message || e.code);
+    msg.style.color = 'var(--red)';
+    toast('Falha na conexão: ' + (e.message || e.code), 'err');
+    db = null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// TEMPLATE CSV
+// ════════════════════════════════════════════════════════════
+function baixarTemplate() {
+  const colunas = [
+    'nomeCliente','shipTo','cnpj','emailCliente','endereco',
+    'modeloMaquina','tipoSolicitacao','refeicoesDia','refeicoesHora',
+    'mesaNecessaria','detergente','secante','fornecedor',
+    'numeroNF','dataInstalacao','vigencia','responsavel','observacoes'
+  ];
+
+  const exemplos = [
+    ['Restaurante Exemplo Ltda.','BZ-001001','12.345.678/0001-99','contato@restaurante.com.br',
+     'Rua das Flores, 100 - Centro - São Paulo - SP','Hobart AMXT','Instalação',
+     '350','50','Sim','Suma Break Up D3.12','Suma Rinse A7',
+     'Hobart Brasil','NF-000123','15/03/2025','36 meses','W. Bastos','Instalação realizada com sucesso.'],
+    ['Colégio São João','BZ-001002','98.765.432/0001-10','contato@colegio.edu.br',
+     'Av. Principal, 200 - Jardim - Campinas - SP','Hobart AM15','Instalação',
+     '200','30','Não','Suma Nova L6','Suma Rinse A8',
+     'EBST','NF-000124','22/04/2025','24 meses','M. Silva',''],
+  ];
+
+  const bom = '\uFEFF'; // BOM para UTF-8
+  const linhas = [colunas.join(';')].concat(
+    exemplos.map(r => r.map(v => `"${v}"`).join(';'))
+  );
+  const csv = bom + linhas.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'WORKRAIL_template_importacao.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Template baixado!', 'ok');
+  setStep(3);
+}
+
+// ════════════════════════════════════════════════════════════
+// UPLOAD / PARSE CSV
+// ════════════════════════════════════════════════════════════
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  if (!file.name.match(/\.(csv|txt)$/i)) {
+    toast('Use um arquivo .csv ou .txt', 'err'); return;
+  }
+
+  const zone = document.getElementById('dropZone');
+  zone.classList.add('fz-loaded');
+  document.getElementById('fzTitle').textContent = 'Arquivo carregado';
+  document.getElementById('fzSub').textContent   = `${file.name} · ${(file.size/1024).toFixed(1)} KB`;
+  document.getElementById('fzFilename').style.display = '';
+  document.getElementById('fzFilename').textContent   = file.name;
+  document.getElementById('fzIcon').innerHTML =
+    `<svg viewBox="0 0 22 22" fill="none" style="color:var(--green)"><path d="M3 11l5 5L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text) {
+  // Remove BOM
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { toast('Arquivo vazio ou sem dados.', 'err'); return; }
+
+  // Detecta separador
+  const sep = lines[0].includes(';') ? ';' : ',';
+
+  function splitLine(line) {
+    const res = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; continue; }
+      if (c === sep && !inQ) { res.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    res.push(cur.trim());
+    return res;
+  }
+
+  const headers = splitLine(lines[0]).map(h => h.trim().replace(/^["']|["']$/g,''));
+  parsedRows = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const vals = splitLine(lines[i]);
+    const row  = {};
+    headers.forEach((h, idx) => { row[h] = (vals[idx] || '').trim(); });
+    parsedRows.push(row);
+  }
+
+  validarEMostrarPreview(headers);
+}
+
+// ════════════════════════════════════════════════════════════
+// VALIDAÇÃO E PREVIEW
+// ════════════════════════════════════════════════════════════
+const OBRIGATORIOS = ['nomeCliente','shipTo','modeloMaquina','tipoSolicitacao','dataInstalacao'];
+
+function validarLinha(row) {
+  const erros = [];
+  OBRIGATORIOS.forEach(f => { if (!row[f]) erros.push(f); });
+  if (row.dataInstalacao && !/^\d{2}\/\d{2}\/\d{4}$/.test(row.dataInstalacao))
+    erros.push('dataInstalacao (formato inválido, use DD/MM/AAAA)');
+  if (row.tipoSolicitacao && !['Instalação','Desinstalação'].includes(row.tipoSolicitacao))
+    erros.push('tipoSolicitacao (use Instalação ou Desinstalação)');
+  return erros;
+}
+
+function validarEMostrarPreview(headers) {
+  if (parsedRows.length === 0) {
+    toast('Nenhuma linha de dados encontrada.', 'err'); return;
+  }
+
+  let errados = 0, ok = 0;
+  parsedRows.forEach(r => {
+    r._erros = validarLinha(r);
+    if (r._erros.length > 0) errados++;
+    else ok++;
+  });
+
+  // Stats
+  document.getElementById('previewStats').innerHTML = `
+    <div class="sum-card" style="border-color:var(--teal)">
+      <div class="sum-num">${parsedRows.length}</div>
+      <div class="sum-lbl">Total</div>
+    </div>
+    <div class="sum-card" style="border-color:var(--green)">
+      <div class="sum-num">${ok}</div>
+      <div class="sum-lbl">Prontos</div>
+    </div>
+    <div class="sum-card" style="border-color:${errados>0?'var(--red)':'var(--green)'}">
+      <div class="sum-num" style="color:${errados>0?'var(--red)':'var(--green)'}">${errados}</div>
+      <div class="sum-lbl">Com Erros</div>
+    </div>
+    <div class="sum-card" style="border-color:var(--teal)">
+      <div class="sum-num">${[...new Set(parsedRows.map(r=>r.fornecedor||'—'))].length}</div>
+      <div class="sum-lbl">Fornecedores</div>
+    </div>`;
+
+  // Alerts
+  const alertsEl = document.getElementById('previewAlerts');
+  if (errados > 0) {
+    alertsEl.innerHTML = `<div class="alert a-warn">
+      <svg viewBox="0 0 15 15" fill="none"><path d="M7.5 1.5L1 13h13L7.5 1.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7.5 6v3M7.5 11v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <div><strong>${errados} linha(s) com erro</strong> serão ignoradas na importação. Verifique as linhas marcadas em vermelho e corrija o arquivo CSV antes de reimportar.</div>
+    </div>`;
+  } else {
+    alertsEl.innerHTML = `<div class="alert a-ok">
+      <svg viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>Todas as ${ok} linhas estão válidas e prontas para importação.</div>
+    </div>`;
+  }
+
+  // Tabela
+  const visibleCols = ['nomeCliente','shipTo','modeloMaquina','tipoSolicitacao','dataInstalacao','vigencia','fornecedor','responsavel'];
+  document.getElementById('previewHead').innerHTML =
+    '<tr>' +
+    ['#','Status',...visibleCols.map(c=>c),'Erros'].map(h=>
+      `<th>${h}</th>`).join('') +
+    '</tr>';
+
+  document.getElementById('previewBody').innerHTML = parsedRows.map((r, i) => {
+    const hasErr = r._erros.length > 0;
+    const statusChip = hasErr
+      ? `<span class="chip c-error">Erro</span>`
+      : `<span class="chip c-import">OK</span>`;
+    const erroText = hasErr ? r._erros.join(', ') : '—';
+    const bg = hasErr ? 'background:var(--red-l)' : '';
+    return `<tr style="${bg}">
+      <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted)">${i+1}</td>
+      <td>${statusChip}</td>
+      ${visibleCols.map(c => `<td>${r[c]||'—'}</td>`).join('')}
+      <td style="font-size:11px;color:var(--red);max-width:200px">${erroText}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('preview-subtitle').textContent =
+    `${parsedRows.length} registros · ${ok} válidos · ${errados} com erro`;
+
+  document.getElementById('card-preview').style.display = '';
+  document.getElementById('card-import').style.display  = '';
+  setStep(4);
+
+  setTimeout(() => {
+    document.getElementById('card-preview').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 100);
+}
+
+// ════════════════════════════════════════════════════════════
+// IMPORTAÇÃO
+// ════════════════════════════════════════════════════════════
+function gerarProtocolo(i) {
+  const ano = new Date().getFullYear();
+  return `WR-${ano}-IMP-${String(i).padStart(4,'0')}`;
+}
+
+function parsearData(str) {
+  if (!str) return new Date();
+  const [d,m,y] = str.split('/');
+  return new Date(+y, +m-1, +d);
+}
+
+// Lê a vigência padrão configurada no Step 1 (em meses, como string "X meses")
+function vigenciaPadrao() {
+  const el = document.getElementById('cfg-vigencia-padrao');
+  const v  = el ? parseInt(el.value) : 36;
+  return (!isNaN(v) && v > 0) ? v + ' meses' : '36 meses';
+}
+
+function montarDocFirestore(row, protocolo) {
+  const agora = new Date();
+  const dataInst = parsearData(row.dataInstalacao);
+  // Usa vigência da linha do CSV se preenchida; senão usa o padrão configurado
+  const vigencia = (row.vigencia && row.vigencia.trim()) ? row.vigencia.trim() : vigenciaPadrao();
+  return {
+    protocolo,
+    status: 'ENCERRADO',
+    etapaAtual: 'encerrado',
+    importado: true,
+    importadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+    dadosCliente: {
+      nomeCliente: row.nomeCliente || '',
+      shipTo:      row.shipTo      || '',
+      cnpj:        row.cnpj        || '',
+      email:       row.emailCliente|| '',
+      endereco:    row.endereco    || ''
+    },
+    dadosSolicitacao: {
+      numeroPedido:    protocolo,
+      dataSolicitacao: dataInst.toISOString().split('T')[0],
+      tipoSolicitacao: row.tipoSolicitacao || 'Instalação',
+      modeloMaquina:   row.modeloMaquina   || '',
+      refeicoesDia:    row.refeicoesDia    || '',
+      refeicoesHora:   row.refeicoesHora   || '',
+      mesaNecessaria:  row.mesaNecessaria  || 'Não',
+      detergente:      row.detergente      || '',
+      secante:         row.secante         || '',
+      representante:   row.responsavel     || 'Importado',
+      comentarios:     row.observacoes     || ''
+    },
+    dadosAdm: {
+      fornecedor:      row.fornecedor || '',
+      numeroPedido:    protocolo,
+      tipoContrato:    'Comodato',
+      vigencia:        vigencia,
+      entregaPrevista: ''
+    },
+    dadosFornecedor: {
+      numeroNF:    row.numeroNF   || '',
+      dataColeta:  dataInst.toISOString().split('T')[0],
+      observacoes: ''
+    },
+    dadosInstalacao: {
+      dataInstalacao: dataInst.toISOString().split('T')[0],
+      horario:        '',
+      tecnico:        row.responsavel || '',
+      checklistMarcados: []
+    },
+    dadosRelatorio: {
+      observacoesFinais: row.observacoes || 'Importado do histórico.'
+    },
+    historico: [
+      {
+        acao: 'IMPORTADO_HISTORICO',
+        responsavel: 'Administrador',
+        etapa: 'importacao',
+        observacao: `Registro importado do histórico. Cliente: ${row.nomeCliente} · Modelo: ${row.modeloMaquina}`,
+        data: dataInst.toISOString(),
+        dataFormatada: dataInst.toLocaleDateString('pt-BR')
+      },
+      {
+        acao: 'INSTALACAO_CONCLUIDA',
+        responsavel: row.responsavel || 'Técnico',
+        etapa: 'relatorio',
+        observacao: `Instalação concluída. ${row.observacoes || ''}`,
+        data: dataInst.toISOString(),
+        dataFormatada: dataInst.toLocaleDateString('pt-BR')
+      }
+    ],
+    documentos: [],
+    criadoEm:    firebase.firestore.FieldValue.serverTimestamp(),
+    atualizadoEm:firebase.firestore.FieldValue.serverTimestamp()
+  };
+}
+
+function log(msg, tipo='info') {
+  const el = document.getElementById('logArea');
+  const linha = document.createElement('div');
+  linha.className = 'log-'+tipo;
+  const ts = new Date().toLocaleTimeString('pt-BR');
+  linha.textContent = `[${ts}] ${msg}`;
+  el.appendChild(linha);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function iniciarImportacao() {
+  if (!db) { toast('Firebase não configurado. Execute o Passo 1.', 'err'); return; }
+  if (importando) return;
+
+  const linhasValidas = parsedRows.filter(r => r._erros.length === 0);
+  if (linhasValidas.length === 0) {
+    toast('Nenhuma linha válida para importar.', 'err'); return;
+  }
+
+  importando = true;
+  document.getElementById('btnImportar').disabled = true;
+  document.getElementById('importProgress').style.display = '';
+  document.getElementById('logArea').innerHTML = '';
+
+  const total = linhasValidas.length;
+  let sucesso = 0, falha = 0;
+
+  log(`Iniciando importação de ${total} registros...`, 'info');
+
+  for (let i = 0; i < linhasValidas.length; i++) {
+    const row = linhasValidas[i];
+    const protocolo = gerarProtocolo(i + 1);
+
+    try {
+      // Verifica duplicata por shipTo + modeloMaquina + dataInstalacao
+      const dupSnap = await db.collection('solicitacoes')
+        .where('dadosCliente.shipTo',          '==', row.shipTo || '')
+        .where('dadosSolicitacao.modeloMaquina','==', row.modeloMaquina || '')
+        .limit(1).get();
+
+      if (!dupSnap.empty) {
+        log(`⚠ Linha ${i+1} ignorada — registro duplicado (${row.nomeCliente} · ${row.modeloMaquina})`, 'warn');
+        falha++;
+      } else {
+        const doc = montarDocFirestore(row, protocolo);
+        await db.collection('solicitacoes').add(doc);
+        log(`✓ [${protocolo}] ${row.nomeCliente} · ${row.modeloMaquina} importado`, 'ok');
+        sucesso++;
+      }
+    } catch(e) {
+      log(`✗ Linha ${i+1} — ERRO: ${e.message}`, 'err');
+      falha++;
+    }
+
+    // Atualiza progresso
+    const pct = Math.round(((i+1)/total)*100);
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressPct').textContent = pct + '%';
+    document.getElementById('progressLabel').textContent =
+      `Importando ${i+1} de ${total}...`;
+
+    // Pequena pausa para não sobrecarregar
+    await new Promise(r => setTimeout(r, 80));
+  }
+
+  log(`━━ Importação concluída: ${sucesso} importados, ${falha} ignorados/com erro ━━`, 'info');
+
+  document.getElementById('importResult').style.display = '';
+  document.getElementById('importResult').innerHTML = sucesso > 0
+    ? `<div class="alert a-ok"><svg viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+       <div><strong>${sucesso} registros importados com sucesso!</strong><br>
+       Acesse o WORKRAIL (workrail_v2.html) e vá em <strong>Histórico</strong> para visualizar os dados importados.
+       ${falha > 0 ? `<br><span style="color:var(--amber)">⚠ ${falha} linha(s) foram ignoradas (duplicatas ou erros).</span>` : ''}</div></div>`
+    : `<div class="alert a-err"><svg viewBox="0 0 15 15" fill="none"><path d="M2 2l11 11M13 2L2 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+       <div>Nenhum registro foi importado. Verifique os erros no log acima.</div></div>`;
+
+  document.getElementById('importBtns').innerHTML =
+    `<a href="workrail_v2.html" class="btn btn-green">
+       <svg viewBox="0 0 14 14" fill="none"><path d="M1 7h11M8 4l4 3-4 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+       Abrir WORKRAIL
+     </a>
+     <button class="btn btn-secondary" onclick="location.reload()">Nova importação</button>`;
+
+  importando = false;
+  setStep(5);
+  toast(sucesso > 0 ? `${sucesso} registros importados com sucesso!` : 'Importação finalizada com erros.', sucesso > 0 ? 'ok' : 'err');
+}
+
+// ════════════════════════════════════════════════════════════
+// LIMPAR
+// ════════════════════════════════════════════════════════════
+function limparArquivo() {
+  parsedRows = [];
+  document.getElementById('fileInput').value = '';
+  const zone = document.getElementById('dropZone');
+  zone.classList.remove('fz-loaded','drag');
+  document.getElementById('fzTitle').textContent = 'Clique ou arraste o arquivo CSV aqui';
+  document.getElementById('fzSub').textContent   = 'Suporte a .csv exportado do Excel ou Google Sheets';
+  document.getElementById('fzFilename').style.display = 'none';
+  document.getElementById('fzIcon').innerHTML =
+    `<svg viewBox="0 0 22 22" fill="none" style="color:var(--teal)"><path d="M11 4v12M7 10l4-4 4 4M3 17h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  document.getElementById('card-preview').style.display = 'none';
+  document.getElementById('card-import').style.display  = 'none';
+  setStep(db ? 2 : 1);
+}
+
+// INIT — pré-preenche credenciais Firebase conhecidas
+(function preencherCredenciais() {
+  const campos = {
+    'cfg-apiKey':            'AIzaSyBp_eQlXyDcvGbKP8AX3MbTIUKT3VaXxfE',
+    'cfg-authDomain':        'workrail-solenis.firebaseapp.com',
+    'cfg-projectId':         'workrail-solenis',
+    'cfg-storageBucket':     'workrail-solenis.firebasestorage.app',
+    'cfg-messagingSenderId': '204626918677',
+    'cfg-appId':             '1:204626918677:web:324d2ab04663a32a14bd1c'
+  };
+  Object.entries(campos).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = val;
+  });
+})();
+
+setStep(1);
+document.getElementById('modal-json').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
+</script>
+</body>
+</html>
