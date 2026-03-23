@@ -2269,6 +2269,11 @@ async function carregarHistoricoFirebase() {
 // FORMSUBMIT — NOTIFICAÇÕES POR E-MAIL
 // ════════════════════════════════════════════════════════════
 async function enviarNotificacao(destinatario, assunto, mensagem, protocolo, detalhes) {
+  // Notificações são OPCIONAIS — falha silenciosa, não interrompe o fluxo
+  if (!FORMSUBMIT_EMAIL || FORMSUBMIT_EMAIL === 'welingtontavares15@gmail.com') {
+    console.warn('[WORKRAIL] FormSubmit não configurado — notificação será ignorada');
+    return; // Não trava o fluxo
+  }
   try {
     const body = new FormData();
     body.append('_to',        destinatario);
@@ -2285,12 +2290,17 @@ async function enviarNotificacao(destinatario, assunto, mensagem, protocolo, det
     body.append('Sistema', 'WORKRAIL · Diversey Brasil');
     body.append('Data',    new Date().toLocaleString('pt-BR'));
 
-    await fetch(`https://formsubmit.co/ajax/${FORMSUBMIT_EMAIL}`, {
+    const res = await fetch(`https://formsubmit.co/ajax/${FORMSUBMIT_EMAIL}`, {
       method: 'POST',
-      body
+      body,
+      timeout: 5000
     });
+    if (!res.ok) {
+      console.warn(`[WORKRAIL] FormSubmit retornou ${res.status} — notificação falhou mas solicitação foi salva`);
+    }
   } catch(e) {
-    console.warn('[WORKRAIL] Falha ao enviar notificação por e-mail:', e);
+    console.warn('[WORKRAIL] Falha ao enviar notificação por e-mail (não impacta o fluxo):', e);
+    // Não relança erro — notificações são opcionais
   }
 }
 
@@ -3199,6 +3209,83 @@ function buildFilters(){
     <button class="filter-btn${f===activeFilter?' active':''}" onclick="setFilter('${f}')">${f}</button>`).join('');
 }
 function setFilter(f){activeFilter=f;buildFilters();buildHistoryTable();}
+
+// Ações do histórico
+function visualizarSolicitacao(id) {
+  // Busca a solicitação no Firebase e abre em modal/página
+  if (!db || !id) { showToast('Erro ao visualizar solicitação.', 'error'); return; }
+  showLoading(true);
+  db.collection('solicitacoes').doc(id).get()
+    .then(doc => {
+      showLoading(false);
+      if (!doc.exists) { showToast('Solicitação não encontrada.', 'error'); return; }
+      currentSolicitacao = { id: doc.id, ...doc.data() };
+      // Abre a solicitação em modo read-only ou em uma tela específica
+      go(currentSolicitacao.etapaAtual || 'home');
+      showToast('Solicitação carregada!', 'success');
+    })
+    .catch(e => { showLoading(false); showToast('Erro: ' + e.message, 'error'); });
+}
+
+function editarSolicitacao(id) {
+  // Carrega a solicitação para edição
+  if (!db || !id) { showToast('Erro ao editar solicitação.', 'error'); return; }
+  showLoading(true);
+  db.collection('solicitacoes').doc(id).get()
+    .then(doc => {
+      showLoading(false);
+      if (!doc.exists) { showToast('Solicitação não encontrada.', 'error'); return; }
+      currentSolicitacao = { id: doc.id, ...doc.data() };
+      // Abre na etapa adequada para edição
+      go(currentSolicitacao.etapaAtual || 'home');
+      showToast('Solicitação carregada para edição.', 'info');
+    })
+    .catch(e => { showLoading(false); showToast('Erro: ' + e.message, 'error'); });
+}
+
+function exportarPDF(id) {
+  // Exporta a solicitação como PDF
+  if (!db || !id) { showToast('Erro ao exportar PDF.', 'error'); return; }
+  db.collection('solicitacoes').doc(id).get()
+    .then(doc => {
+      if (!doc.exists) { showToast('Solicitação não encontrada.', 'error'); return; }
+      const data = doc.data();
+      const cliente = data.dadosCliente?.nomeCliente || '—';
+      const protocolo = data.protocolo || data.dadosSolicitacao?.numeroPedido || 'SEM-PROTOCOLO';
+
+      // Cria um PDF simples com as informações da solicitação
+      const conteudo = `
+SOLICITAÇÃO DE MÁQUINA DE LAVAR LOUÇAS
+Protocolo: ${protocolo}
+Data: ${new Date().toLocaleDateString('pt-BR')}
+
+CLIENTE
+Nome: ${cliente}
+CNPJ: ${data.dadosCliente?.cnpj || '—'}
+Endereço: ${data.dadosCliente?.endereco || '—'}
+
+SOLICITAÇÃO
+Tipo: ${data.dadosSolicitacao?.tipoSolicitacao || '—'}
+Modelo: ${data.dadosSolicitacao?.modeloMaquina || '—'}
+Status: ${data.status || '—'}
+
+RESPONSÁVEL
+${data.dadosSolicitacao?.representante || '—'}
+      `;
+
+      // Cria um blob e faz download
+      const blob = new Blob([conteudo], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `WORKRAIL-${protocolo}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('PDF gerado e baixado!', 'success');
+    })
+    .catch(e => showToast('Erro ao gerar PDF: ' + e.message, 'error'));
+}
+
 function buildHistoryTable(){
   const body=document.getElementById('histBody');
   const data=activeFilter==='Todos'?HISTORY:HISTORY.filter(h=>{
@@ -3214,9 +3301,9 @@ function buildHistoryTable(){
       <td style="font-size:12px;font-family:'DM Mono',monospace">${h.date}</td>
       <td><div class="chip ${h.status}"><div class="chip-dot"></div>${h.statusTxt}</div></td>
       <td><div class="ht-actions">
-        <button class="ht-btn" title="Ver"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="6.5" r="1.5" fill="currentColor"/></svg></button>
-        <button class="ht-btn" title="Editar"><svg viewBox="0 0 13 13" fill="none"><path d="M8.5 2.5L10.5 4.5M8.5 2.5L6 5l2 2 2.5-2.5M6 5L2.5 8.5l-.5 2 2-.5L7.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="ht-btn" title="PDF"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v3h3M5 7h3M5 9h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg></button>
+        <button class="ht-btn" title="Ver" onclick="event.stopPropagation();visualizarSolicitacao('${h.id}')"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.2"/><circle cx="6.5" cy="6.5" r="1.5" fill="currentColor"/></svg></button>
+        <button class="ht-btn" title="Editar" onclick="event.stopPropagation();editarSolicitacao('${h.id}')"><svg viewBox="0 0 13 13" fill="none"><path d="M8.5 2.5L10.5 4.5M8.5 2.5L6 5l2 2 2.5-2.5M6 5L2.5 8.5l-.5 2 2-.5L7.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="ht-btn" title="PDF" onclick="event.stopPropagation();exportarPDF('${h.id}')"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v3h3M5 7h3M5 9h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg></button>
       </div></td>
     </tr>`).join('');
 }
