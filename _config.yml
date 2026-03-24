@@ -1,0 +1,29 @@
+# GitHub Pages Configuration for WORKRAIL
+
+# Disable Jekyll processing to serve HTML files as-is
+markdown: kramdown
+remote_theme: null
+
+# Include all files
+include:
+  - .nojekyll
+
+# Exclude unnecessary files
+exclude:
+  - .git
+  - .gitignore
+  - node_modules
+  - vendor
+  - "*.docx"
+  - "*.xlsx"
+  - "Solicitações de maquina de lavar louças"
+
+# Base URL
+baseurl: "/workrail-solicitacao-maquinas"
+
+# Site URL
+url: "https://welingtontavares15-hue.github.io"
+
+# Title
+title: "WORKRAIL — Gestão de Máquinas de Lavar Louças"
+description: "Plataforma web para controle completo do fluxo de solicitação, aprovação, fornecimento e instalação de máquinas de lavanderia industrial."
