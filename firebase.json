@@ -25,10 +25,14 @@
       "RELATORIO*",
       "COMO_ACESSAR*",
       "CORRECAO*",
+      "LIMPAR_CACHE*",
       "mudancas*",
       "analise*",
       "admin_firebase*",
-      "criar_usuarios*"
+      "criar_usuarios*",
+      "workrail.html",
+      "workrail_app.html",
+      "criar_admin_firebase.html"
     ],
     "rewrites": [
       {
