@@ -1158,7 +1158,10 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
               <button class="btn btn-back" onclick="goPage('home')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
               <button class="btn btn-clear"><svg viewBox="0 0 13 13" fill="none"><path d="M2 2l9 9M11 2L2 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Limpar</button>
             </div>
-            <div class="ab-right"><button class="btn btn-send" onclick="showMod('mEnviar')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Enviar para Gestor</button></div>
+            <div class="ab-right">
+              <button class="btn btn-advance" onclick="salvarSolicitacao()" style="margin-right:8px"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Salvar Solicitação</button>
+              <button class="btn btn-send" onclick="showMod('mEnviar')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Enviar para Gestor</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1757,6 +1760,9 @@ async function carregarPerfilUsuario(firebaseUser) {
     aplicarPerfilNaInterface();
     await carregarHistoricoFirebase();
 
+    // ✅ INICIALIZA LISTENERS EM TEMPO REAL
+    setupRealtimeListeners();
+
   } catch(e) {
     console.error('[WORKRAIL] Erro ao carregar perfil:', e);
     // Fallback — usa informações básicas do Firebase Auth
@@ -1770,6 +1776,9 @@ async function carregarPerfilUsuario(firebaseUser) {
     };
     document.getElementById('login-overlay').classList.add('hidden');
     aplicarPerfilNaInterface();
+
+    // ✅ INICIALIZA LISTENERS MESMO EM FALLBACK
+    setupRealtimeListeners();
   }
 }
 
@@ -3473,6 +3482,335 @@ async function toggleAtivoModelo(id, atualmenteAtivo) {
 // Carrega dados ao entrar na tela admin
 function onEnterAdmin() {
   adminTab('usuarios');
+}
+
+// ════════════════════════════════════════════════════════════
+// 🔧 FUNÇÕES CRÍTICAS — DATA PERSISTENCE & VALIDATION
+// ════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FUNÇÃO 1: VALIDAR SOLICITAÇÃO
+// ─────────────────────────────────────────────────────────────
+function validarSolicitacao() {
+  const campos = {
+    'Ship To': document.querySelector('input[placeholder="Código Ship To"]'),
+    'Nome do Cliente': document.querySelector('input[placeholder="Razão social"]'),
+    'CNPJ': document.querySelector('input[placeholder="00.000.000/0000-00"]'),
+    'E-mail do Cliente': document.querySelector('input[placeholder="contato@cliente.com.br"]'),
+    'Endereço de Instalação': document.querySelector('input[placeholder*="Rua"]'),
+    'Tipo da Solicitação': document.getElementById('tipoSolicitacao'),
+    'Modelo da Máquina': document.querySelectorAll('select')[3] || null,
+    'Data da Solicitação': document.getElementById('dataSolic')
+  };
+
+  for (let [nome, campo] of Object.entries(campos)) {
+    if (!campo) {
+      console.warn(`[VALIDAÇÃO] Campo "${nome}" não encontrado no DOM`);
+      continue;
+    }
+    if (!campo.value || campo.value.trim() === '') {
+      showToast(`⚠️ Campo obrigatório: ${nome}`, 'error');
+      campo.focus();
+      campo.style.borderColor = '#c62828';
+      setTimeout(() => { campo.style.borderColor = ''; }, 3000);
+      return false;
+    }
+  }
+
+  // Validar formato de CNPJ (básico)
+  const cnpjField = document.querySelector('input[placeholder="00.000.000/0000-00"]');
+  if (cnpjField && cnpjField.value) {
+    const cnpj = cnpjField.value.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+      showToast('❌ CNPJ inválido (deve ter 14 dígitos)', 'error');
+      return false;
+    }
+  }
+
+  // Validar email
+  const emailField = document.querySelector('input[placeholder="contato@cliente.com.br"]');
+  if (emailField && emailField.value) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailField.value)) {
+      showToast('❌ E-mail inválido', 'error');
+      return false;
+    }
+  }
+
+  showToast('✅ Validação concluída com sucesso', 'success');
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FUNÇÃO 2: GERAR NÚMERO DE PEDIDO
+// ─────────────────────────────────────────────────────────────
+async function gerarNumeroPedido() {
+  if (!firebaseOk) {
+    // Modo offline — gera número local
+    const timestamp = Date.now().toString().slice(-6);
+    return `SOL-${timestamp}`;
+  }
+
+  try {
+    const counterRef = db.collection('contadores').doc('solicitacoes');
+    const counterDoc = await counterRef.get();
+
+    if (!counterDoc.exists) {
+      // Primeira vez — inicializa com 1000
+      await counterRef.set({ valor: 1000 });
+      return 'SOL-1001';
+    }
+
+    const proximoValor = counterDoc.data().valor + 1;
+    await counterRef.update({ valor: proximoValor });
+
+    console.log(`[NÚMERO PEDIDO] Gerado: SOL-${proximoValor}`);
+    return `SOL-${proximoValor}`;
+  } catch (error) {
+    console.error('[NÚMERO PEDIDO] Erro ao gerar:', error);
+    // Fallback: usa timestamp
+    const timestamp = Date.now().toString().slice(-6);
+    return `SOL-${timestamp}`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FUNÇÃO 3: SALVAR SOLICITAÇÃO NO FIRESTORE
+// ─────────────────────────────────────────────────────────────
+async function salvarSolicitacao() {
+  if (!firebaseOk || !auth.currentUser) {
+    showToast('❌ Sistema não inicializado. Verifique a conexão.', 'error');
+    return false;
+  }
+
+  // Validar antes de salvar
+  if (!validarSolicitacao()) {
+    return false;
+  }
+
+  showLoading(true);
+
+  try {
+    const numeroPedido = document.getElementById('numeroPedidoSolic').value;
+
+    // Coleta dados do formulário
+    const solicitacaoData = {
+      // Identificação
+      numeroPedido: numeroPedido || 'SOL-DRAFT',
+      dataSolicitacao: document.getElementById('dataSolic').value,
+      tipoSolicitacao: document.getElementById('tipoSolicitacao').value,
+
+      // Dados do Cliente
+      cliente: {
+        shipTo: document.querySelector('input[placeholder="Código Ship To"]').value,
+        nome: document.querySelector('input[placeholder="Razão social"]').value,
+        cnpj: document.querySelector('input[placeholder="00.000.000/0000-00"]').value,
+        email: document.querySelector('input[placeholder="contato@cliente.com.br"]').value,
+        endereco: document.querySelector('input[placeholder*="Rua"]').value,
+      },
+
+      // Dados da Solicitação
+      equipamento: {
+        modelo: document.querySelectorAll('select')[3]?.value || '',
+        refeicoesPerDia: document.querySelectorAll('input[type="number"]')[0]?.value || '',
+        refeicoesPerHora: document.querySelectorAll('input[type="number"]')[1]?.value || '',
+      },
+
+      // Acessórios
+      acessorios: {
+        mesaNecessaria: document.getElementById('tMesa')?.checked || false,
+        detergente: document.querySelectorAll('select')[4]?.value || '',
+        secante: document.querySelectorAll('select')[5]?.value || '',
+      },
+
+      // Metadados
+      criadoPor: auth.currentUser.uid,
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'RASCUNHO',
+      historico: [
+        {
+          acao: 'CRIADA',
+          por: auth.currentUser.email,
+          em: new Date().toISOString(),
+          descricao: 'Solicitação criada'
+        }
+      ]
+    };
+
+    // Salvar no Firestore
+    let solicitacaoRef;
+    if (currentSolicitacaoId) {
+      // Update existente
+      await db.collection('solicitacoes').doc(currentSolicitacaoId).update(solicitacaoData);
+      solicitacaoRef = currentSolicitacaoId;
+      showToast(`✅ Solicitação ${numeroPedido} atualizada!`, 'success');
+    } else {
+      // Novo documento
+      const docRef = await db.collection('solicitacoes').add(solicitacaoData);
+      solicitacaoRef = docRef.id;
+      currentSolicitacaoId = docRef.id;
+      showToast(`✅ Solicitação ${numeroPedido} salva com sucesso!`, 'success');
+    }
+
+    console.log(`[SALVAR] Solicitação ${numeroPedido} salva em ${solicitacaoRef}`);
+
+    // Limpar formulário para nova solicitação
+    setTimeout(() => {
+      // document.querySelector('form').reset();
+      gerarNumeroPedido().then(num => {
+        const campo = document.getElementById('numeroPedidoSolic');
+        if (campo) campo.value = num;
+      });
+    }, 1500);
+
+    return true;
+  } catch (error) {
+    console.error('[SALVAR] Erro:', error);
+    showToast(`❌ Erro ao salvar: ${error.message}`, 'error');
+    return false;
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FUNÇÃO 4: UPLOAD DE CONTRATO
+// ─────────────────────────────────────────────────────────────
+async function uploadContrato(file, nomeArquivo = null) {
+  if (!firebaseOk || !file) {
+    showToast('❌ Sistema não pronto ou arquivo não selecionado', 'error');
+    return null;
+  }
+
+  showLoading(true);
+
+  try {
+    // Validar tipo de arquivo
+    const tiposPermitidos = ['application/pdf', 'image/png', 'image/jpeg', 'application/msword'];
+    if (!tiposPermitidos.includes(file.type)) {
+      showToast('❌ Tipo de arquivo não permitido (PDF, PNG, JPG, DOC)', 'error');
+      return null;
+    }
+
+    // Validar tamanho (máx 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('❌ Arquivo muito grande (máx 10MB)', 'error');
+      return null;
+    }
+
+    const timestamp = Date.now();
+    const nomeStorage = nomeArquivo || `contratos/${timestamp}_${file.name}`;
+    const storageRef = storage.ref(nomeStorage);
+
+    console.log(`[UPLOAD] Iniciando: ${nomeStorage}`);
+
+    // Upload com progresso
+    const uploadTask = storageRef.put(file);
+
+    return new Promise((resolve, reject) => {
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log(`[UPLOAD] Progresso: ${percent.toFixed(0)}%`);
+        },
+        (error) => {
+          console.error('[UPLOAD] Erro:', error);
+          showToast(`❌ Erro no upload: ${error.message}`, 'error');
+          reject(error);
+        },
+        async () => {
+          try {
+            const url = await uploadTask.snapshot.ref.getDownloadURL();
+            console.log(`[UPLOAD] ✅ Completo: ${url}`);
+            showToast(`✅ Arquivo ${file.name} enviado!`, 'success');
+            resolve(url);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+    });
+  } catch (error) {
+    console.error('[UPLOAD] Erro crítico:', error);
+    showToast(`❌ Erro no upload: ${error.message}`, 'error');
+    return null;
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ✅ FUNÇÃO 5: CARREGAR DADOS EM TEMPO REAL
+// ─────────────────────────────────────────────────────────────
+function setupRealtimeListeners() {
+  if (!firebaseOk || !auth.currentUser) {
+    console.warn('[REALTIME] Não configurado — Firebase offline');
+    return;
+  }
+
+  try {
+    // Ouve solicitações do usuário atual
+    db.collection('solicitacoes')
+      .where('criadoPor', '==', auth.currentUser.uid)
+      .orderBy('criadoEm', 'desc')
+      .limit(50)
+      .onSnapshot(
+        (snapshot) => {
+          const solicitacoes = [];
+          snapshot.forEach((doc) => {
+            solicitacoes.push({
+              id: doc.id,
+              ...doc.data(),
+              criadoEm: doc.data().criadoEm?.toDate?.() || new Date()
+            });
+          });
+
+          console.log(`[REALTIME] ${solicitacoes.length} solicitações carregadas`);
+
+          // Atualizar histórico na UI
+          if (typeof buildHistoryTable === 'function') {
+            buildHistoryTable();
+          }
+
+          // Atualizar dashboard
+          if (typeof buildDashboard === 'function') {
+            buildDashboard();
+          }
+        },
+        (error) => {
+          console.error('[REALTIME] Erro ao ouvir solicitações:', error);
+        }
+      );
+
+    // Ouve notificações para o usuário atual
+    db.collection('notificacoes')
+      .where('paraUID', '==', auth.currentUser.uid)
+      .where('lida', '==', false)
+      .onSnapshot(
+        (snapshot) => {
+          const notificacoes = [];
+          snapshot.forEach((doc) => {
+            notificacoes.push(doc.data());
+          });
+
+          console.log(`[NOTIFICAÇÕES] ${notificacoes.length} novas`);
+
+          // Atualizar notificações na UI
+          if (typeof buildNotifications === 'function') {
+            buildNotifications();
+          }
+        },
+        (error) => {
+          console.error('[REALTIME] Erro ao ouvir notificações:', error);
+        }
+      );
+
+    console.log('[REALTIME] ✅ Listeners configurados');
+  } catch (error) {
+    console.error('[REALTIME] Erro ao configurar listeners:', error);
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────
