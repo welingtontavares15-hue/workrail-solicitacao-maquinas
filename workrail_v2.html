@@ -684,9 +684,10 @@ const APP_CONFIG = {
   firebase: {
     authDomain: "workrail-solenis.firebaseapp.com",
     projectId: "workrail-solenis",
-    storageBucket: "workrail-solenis.appspot.com",
-    messagingSenderId: "000000000000",
-    appId: "1:000000000000:web:0000000000000000"
+    storageBucket: "workrail-solenis.firebasestorage.app",
+    messagingSenderId: "204626918677",
+    appId: "1:204626918677:web:324d2ab04663a32a14bd1c",
+    measurementId: "G-WQDRMPES9N"
   },
   rateLimiting: {
     maxAttempts: 5,
@@ -1047,10 +1048,12 @@ const handleLogin = errorBoundary(async (e) => {
     const errorMessages = {
       'auth/user-not-found': '👤 Usuário não encontrado',
       'auth/wrong-password': '🔐 Senha incorreta',
+      'auth/invalid-credential': '🔐 Email ou senha incorretos',
       'auth/invalid-email': '📧 Email inválido',
       'auth/user-disabled': '🚫 Usuário desabilitado',
       'auth/too-many-requests': '⏱️ Muitas tentativas. Tente mais tarde',
-      'auth/operation-not-allowed': '❌ Operação não permitida'
+      'auth/operation-not-allowed': '❌ Operação não permitida',
+      'auth/network-request-failed': '🌐 Erro de conexão. Verifique a internet'
     };
 
     const message = errorMessages[error.code] || '❌ Erro na autenticação';
