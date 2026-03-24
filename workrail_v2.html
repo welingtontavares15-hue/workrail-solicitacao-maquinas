@@ -891,10 +891,10 @@ async function initializeFirebase() {
     // });
     // const config = await response.json();
 
-    // For now, use config from environment
+    // Firebase configuration with API key
     const firebaseConfig = {
       ...APP_CONFIG.firebase,
-      apiKey: "[SECURE_API_KEY_WILL_BE_INJECTED_AT_DEPLOY]"
+      apiKey: "AIzaSyBp_eQlXyDcvGbKP8AX3MbTIUKT3VaXxfE"
     };
 
     firebase.initializeApp(firebaseConfig);
