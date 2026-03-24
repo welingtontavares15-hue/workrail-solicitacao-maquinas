@@ -1,0 +1,9 @@
+# Lock files de editores
+.~lock.*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Node (caso use build futuramente)
+node_modules/
