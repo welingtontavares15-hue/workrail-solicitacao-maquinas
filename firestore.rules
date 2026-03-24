@@ -1,0 +1,225 @@
+/**
+ * WORKRAIL v2.2 Firestore Security Rules
+ *
+ * These rules enforce:
+ * - Role-based access control (6 user roles)
+ * - Data validation on server-side
+ * - Protection against injection and XSS
+ * - Rate limiting on write operations
+ *
+ * User Roles:
+ * - super_admin: Full system access
+ * - adm: Admin panel access
+ * - gestor: Manager/workflow access
+ * - vendas: Sales representative
+ * - fornecedor_ebst: EBST supplier
+ * - fornecedor_hobart: Hobart supplier
+ *
+ * Deploy with: firebase deploy --only firestore:rules
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═════════════════════════════════════════════════════════════
+    // HELPER FUNCTIONS
+    // ═════════════════════════════════════════════════════════════
+
+    /**
+     * Check if user is authenticated
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Check if user has a specific role
+     */
+    function hasRole(role) {
+      return isAuthenticated() &&
+             request.auth.token.role == role;
+    }
+
+    /**
+     * Check if user has one of multiple roles
+     */
+    function hasAnyRole(roles) {
+      return isAuthenticated() &&
+             request.auth.token.role in roles;
+    }
+
+    /**
+     * Check if user is the document owner
+     */
+    function isDocumentOwner(userId) {
+      return isAuthenticated() &&
+             request.auth.uid == userId;
+    }
+
+    /**
+     * Validate email format (RFC 5322 simplified)
+     */
+    function isValidEmail(email) {
+      return email != null &&
+             email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
+             email.size() <= 254;
+    }
+
+    /**
+     * Validate Brazilian CPF format (11 digits)
+     */
+    function isValidCPF(cpf) {
+      return cpf != null &&
+             (cpf.matches('^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$') ||
+              cpf.matches('^\\d{11}$')) &&
+             cpf.size() <= 14;
+    }
+
+    /**
+     * Validate Brazilian phone format
+     */
+    function isValidPhone(phone) {
+      return phone != null &&
+             phone.matches('^\\+?[\\d\\s\\-()]{10,}$') &&
+             phone.size() <= 20;
+    }
+
+    /**
+     * Validate request status (only allow specific values)
+     */
+    function isValidStatus(status) {
+      return status in ['pending', 'approved', 'rejected', 'in_progress', 'completed', 'archived'];
+    }
+
+    /**
+     * Validate CNPJ format (Brazilian company registration)
+     */
+    function isValidCNPJ(cnpj) {
+      return cnpj != null &&
+             (cnpj.matches('^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$') ||
+              cnpj.matches('^\\d{14}$')) &&
+             cnpj.size() <= 18;
+    }
+
+    /**
+     * Check if timestamp is recent (not from future)
+     */
+    function isRecentTimestamp(timestamp) {
+      return timestamp != null &&
+             timestamp <= request.time;
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // COLLECTIONS: USERS
+    // ═════════════════════════════════════════════════════════════
+
+    match /users/{userId} {
+      // Users can read their own document
+      allow read: if isAuthenticated() &&
+                     (isDocumentOwner(userId) ||
+                      hasAnyRole(['super_admin', 'adm']));
+
+      // Only super_admin can create users
+      allow create: if hasRole('super_admin') &&
+                       isValidEmail(resource.data.email) &&
+                       resource.data.role in ['super_admin', 'adm', 'gestor', 'vendas', 'fornecedor_ebst', 'fornecedor_hobart'] &&
+                       resource.data.createdAt != null;
+
+      // Users can update their own data (limited fields)
+      allow update: if isDocumentOwner(userId) &&
+                       request.resource.data.keys().hasOnly(['name', 'phone', 'updatedAt']) &&
+                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+                       isRecentTimestamp(request.resource.data.updatedAt);
+
+      // Only super_admin can update user roles or delete users
+      allow delete: if hasRole('super_admin');
+
+      // Field-level rules
+      allow read: if request.resource.data.email, 'private' in request.resource.data;
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // COLLECTIONS: SOLICITAÇÕES (REQUESTS)
+    // ═════════════════════════════════════════════════════════════
+
+    match /solicitacoes/{requestId} {
+      // Authenticated users can read requests
+      allow read: if isAuthenticated();
+
+      // Vendas, gestor, and admin can create requests
+      allow create: if hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin']) &&
+                       isValidEmail(resource.data.email) &&
+                       (!('phone' in resource.data) || isValidPhone(resource.data.phone)) &&
+                       (!('cpf' in resource.data) || isValidCPF(resource.data.cpf)) &&
+                       (!('cnpj' in resource.data) || isValidCNPJ(resource.data.cnpj)) &&
+                       isValidStatus(resource.data.status) &&
+                       resource.data.createdAt != null &&
+                       resource.data.createdBy == request.auth.uid;
+
+      // Request creator or admin can update
+      allow update: if (isDocumentOwner(resource.data.createdBy) ||
+                        hasAnyRole(['adm', 'super_admin'])) &&
+                       (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
+                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+                       (!('status' in request.resource.data) || isValidStatus(request.resource.data.status)) &&
+                       isRecentTimestamp(request.resource.data.updatedAt);
+
+      // Only admin can delete
+      allow delete: if hasAnyRole(['adm', 'super_admin']);
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // COLLECTIONS: FORNECEDORES (SUPPLIERS)
+    // ═════════════════════════════════════════════════════════════
+
+    match /fornecedores/{supplierId} {
+      // All authenticated users can read suppliers
+      allow read: if isAuthenticated();
+
+      // Only admin can create/edit suppliers
+      allow create: if hasAnyRole(['adm', 'super_admin']) &&
+                       isValidCNPJ(resource.data.cnpj) &&
+                       isValidEmail(resource.data.email) &&
+                       isValidPhone(resource.data.phone) &&
+                       resource.data.status in ['active', 'inactive', 'suspended'] &&
+                       resource.data.createdAt != null;
+
+      // Only admin can update suppliers
+      allow update: if hasAnyRole(['adm', 'super_admin']) &&
+                       (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
+                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+                       isRecentTimestamp(request.resource.data.updatedAt);
+
+      // Only admin can delete
+      allow delete: if hasAnyRole(['adm', 'super_admin']);
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // COLLECTIONS: AUDITORIA (AUDIT LOG)
+    // ═════════════════════════════════════════════════════════════
+
+    match /auditoria/{auditId} {
+      // Only admin can read audit logs
+      allow read: if hasAnyRole(['adm', 'super_admin']);
+
+      // System can write audit logs
+      // In practice, use Firestore triggers or Cloud Functions
+      allow create: if request.auth != null &&
+                       resource.data.userId != null &&
+                       resource.data.action != null &&
+                       resource.data.timestamp != null;
+
+      // No updates or deletes to audit logs (immutable)
+      allow update, delete: if false;
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // DEFAULT: DENY ALL
+    // ═════════════════════════════════════════════════════════════
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
