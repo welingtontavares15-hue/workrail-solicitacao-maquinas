@@ -673,14 +673,15 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
 <!-- ═════════════════════════════════════════════════════════════ -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <script>
 // ═════════════════════════════════════════════════════════════
 // MODULE 1: CONFIGURATION
 // ═════════════════════════════════════════════════════════════
 const APP_CONFIG = {
-  version: '2.2.0',
+  version: '2.3.0',
   firebase: {
     authDomain: "workrail-solenis.firebaseapp.com",
     projectId: "workrail-solenis",
@@ -696,11 +697,212 @@ const APP_CONFIG = {
 };
 
 // Firebase will be initialized after config is loaded from Cloud Function
-let auth, db;
+let auth, db, storage;
 
 // ═════════════════════════════════════════════════════════════
-// MODULE 2: UTILITIES & VALIDATORS
+// MODULE 2: STATE MACHINE CONSTANTS
 // ═════════════════════════════════════════════════════════════
+
+/**
+ * Formal 15-state workflow machine.
+ * statusAtual is always one of these codes; the UI uses the label.
+ */
+const STATUS = {
+  RASCUNHO:                   { code: 'rascunho',                   label: 'Rascunho' },
+  ENVIADA_VENDAS:             { code: 'enviada_vendas',             label: 'Enviada por Vendas' },
+  EM_ANALISE_GESTOR:          { code: 'em_analise_gestor',          label: 'Em Análise (Gestor)' },
+  AJUSTE_SOLICITADO_GESTOR:   { code: 'ajuste_solicitado_gestor',   label: 'Ajuste Solicitado (Gestor)' },
+  REPROVADA_GESTOR:           { code: 'reprovada_gestor',           label: 'Reprovada (Gestor)' },
+  APROVADA_GESTOR:            { code: 'aprovada_gestor',            label: 'Aprovada (Gestor)' },
+  EM_ANALISE_ADM:             { code: 'em_analise_adm',             label: 'Em Análise (ADM)' },
+  ENCAMINHADA_FORNECEDOR:     { code: 'encaminhada_fornecedor',     label: 'Encaminhada ao Fornecedor' },
+  AGUARDANDO_NF:              { code: 'aguardando_nf',              label: 'Aguardando NF' },
+  NF_ANEXADA:                 { code: 'nf_anexada',                 label: 'NF Anexada' },
+  EM_ACOMPANHAMENTO_LOGISTICO:{ code: 'em_acompanhamento_logistico',label: 'Em Acompanhamento Logístico' },
+  INSTALACAO_PROGRAMADA:      { code: 'instalacao_programada',      label: 'Instalação Programada' },
+  INSTALACAO_EM_ANDAMENTO:    { code: 'instalacao_em_andamento',    label: 'Instalação em Andamento' },
+  INSTALACAO_CONCLUIDA:       { code: 'instalacao_concluida',       label: 'Instalação Concluída' },
+  FINALIZADA:                 { code: 'finalizada',                  label: 'Finalizada' }
+};
+
+/** Map status code → label for fast lookup */
+const STATUS_LABELS = Object.fromEntries(
+  Object.values(STATUS).map(s => [s.code, s.label])
+);
+
+/**
+ * Allowed transitions per role.
+ * Each entry: { from, to, role }
+ */
+const TRANSITIONS = [
+  // vendas
+  { from: 'rascunho',                  to: 'enviada_vendas',             role: 'vendas' },
+  { from: 'ajuste_solicitado_gestor',  to: 'enviada_vendas',             role: 'vendas' },
+  // gestor
+  { from: 'enviada_vendas',            to: 'em_analise_gestor',          role: 'gestor' },
+  { from: 'em_analise_gestor',         to: 'aprovada_gestor',            role: 'gestor' },
+  { from: 'em_analise_gestor',         to: 'reprovada_gestor',           role: 'gestor' },
+  { from: 'em_analise_gestor',         to: 'ajuste_solicitado_gestor',   role: 'gestor' },
+  // adm
+  { from: 'aprovada_gestor',           to: 'em_analise_adm',             role: 'adm' },
+  { from: 'em_analise_adm',            to: 'encaminhada_fornecedor',     role: 'adm' },
+  { from: 'nf_anexada',                to: 'em_acompanhamento_logistico',role: 'adm' },
+  { from: 'em_acompanhamento_logistico',to:'instalacao_programada',      role: 'adm' },
+  { from: 'instalacao_programada',     to: 'instalacao_em_andamento',    role: 'adm' },
+  { from: 'instalacao_em_andamento',   to: 'instalacao_concluida',       role: 'adm' },
+  { from: 'instalacao_concluida',      to: 'finalizada',                 role: 'adm' },
+  // fornecedor_ebst / fornecedor_hobart
+  { from: 'encaminhada_fornecedor',    to: 'aguardando_nf',              role: 'fornecedor_ebst' },
+  { from: 'aguardando_nf',             to: 'nf_anexada',                 role: 'fornecedor_ebst' },
+  { from: 'encaminhada_fornecedor',    to: 'aguardando_nf',              role: 'fornecedor_hobart' },
+  { from: 'aguardando_nf',             to: 'nf_anexada',                 role: 'fornecedor_hobart' }
+];
+
+/**
+ * Attachment types required before a transition may proceed (client-side guard).
+ * The server-side Rules also enforce status progression, but the client must
+ * check for attachments before calling updateDoc.
+ */
+const REQUIRED_ATTACHMENTS = {
+  'enviada_vendas':        ['relatorio_inicial'],
+  'aprovada_gestor':       ['checklist_instalacao'],
+  'nf_anexada':            ['nota_fiscal'],
+  'finalizada':            ['relatorio_final_instalacao']
+};
+
+/**
+ * Return the human-readable label for a status code.
+ */
+function getStatusLabel(code) {
+  return STATUS_LABELS[code] || code;
+}
+
+/**
+ * Check whether the current user role may perform the given status transition.
+ */
+function canTransition(fromStatus, toStatus, userRole) {
+  if (userRole === 'super_admin') return true;
+  return TRANSITIONS.some(t => t.from === fromStatus && t.to === toStatus && t.role === userRole);
+}
+
+// ═════════════════════════════════════════════════════════════
+// MODULE 3: NOTIFICATION HELPER (FormSubmit)
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Send an e-mail notification via FormSubmit and log it in the
+ * /solicitacoes/{id}/notificacoes subcollection for audit.
+ *
+ * @param {string} requestId   - Firestore document ID of the solicitação
+ * @param {string} event       - Notification event type (e.g. 'nova_solicitacao')
+ * @param {Object} payload     - { toEmail, protocolo, cliente, modelo, etapa,
+ *                                 responsavel, dataMov, proximaAcao }
+ */
+async function sendNotification(requestId, event, payload) {
+  const FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/ajax/';
+  const toEmail = payload.toEmail;
+  if (!toEmail) return;
+
+  const body = {
+    _subject: `[WORKRAIL] ${payload.protocolo} — ${getStatusLabel(payload.etapa)}`,
+    protocolo:      payload.protocolo      || '',
+    cliente:        payload.cliente        || '',
+    modelo:         payload.modelo         || '',
+    etapa:          getStatusLabel(payload.etapa),
+    responsavel:    payload.responsavel    || '',
+    dataMov:        payload.dataMov        || new Date().toISOString(),
+    proximaAcao:    payload.proximaAcao    || '',
+    _captcha:       'false',
+    _template:      'table'
+  };
+
+  try {
+    await fetch(`${FORMSUBMIT_ENDPOINT}${encodeURIComponent(toEmail)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch (err) {
+    Logger.error('FormSubmit notification failed', err);
+  }
+
+  // Log the notification dispatch (fire-and-forget; does not block transition)
+  if (db && requestId) {
+    try {
+      await db
+        .collection('solicitacoes').doc(requestId)
+        .collection('notificacoes')
+        .add({
+          event,
+          toEmail,
+          sentAt: firebase.firestore.FieldValue.serverTimestamp(),
+          payload: body
+        });
+    } catch (err) {
+      Logger.error('Failed to log notification in Firestore', err);
+    }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════
+// MODULE 4: WORKFLOW TRANSITION HELPER
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Perform a validated status transition on a solicitação.
+ *
+ * - Checks role permissions
+ * - Checks required attachments (client-side)
+ * - Writes the updated statusAtual to the main document
+ * - Appends an immutable movimentação record
+ *
+ * @param {string}  requestId   - Firestore document ID
+ * @param {string}  fromStatus  - Current status code
+ * @param {string}  toStatus    - Target status code
+ * @param {Object}  actor       - { uid, role, email }
+ * @param {Object}  extras      - { motivo?, anexosTipo? } optional fields
+ * @returns {Promise<void>}
+ */
+async function performTransition(requestId, fromStatus, toStatus, actor, extras = {}) {
+  if (!canTransition(fromStatus, toStatus, actor.role)) {
+    throw new Error(`Transição não permitida: ${fromStatus} → ${toStatus} para ${actor.role}`);
+  }
+
+  // Client-side attachment guard
+  const required = REQUIRED_ATTACHMENTS[toStatus] || [];
+  if (required.length > 0 && Array.isArray(extras.anexosTipo)) {
+    const missing = required.filter(t => !extras.anexosTipo.includes(t));
+    if (missing.length > 0) {
+      throw new Error(`Anexo(s) obrigatório(s) ausente(s): ${missing.join(', ')}`);
+    }
+  }
+
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+
+  // Update main document (lean – only state + audit fields)
+  await db.collection('solicitacoes').doc(requestId).update({
+    statusAtual: toStatus,
+    etapaAtual:  toStatus,
+    assigneeRole: actor.role,
+    updatedAt:   now
+  });
+
+  // Append immutable audit record
+  const mov = {
+    fromStatus,
+    toStatus,
+    action:      extras.action || toStatus,
+    actorUid:    actor.uid,
+    actorRole:   actor.role,
+    motivo:      extras.motivo || null,
+    at:          now,
+    correlationId: requestId
+  };
+  await db
+    .collection('solicitacoes').doc(requestId)
+    .collection('movimentacoes')
+    .add(mov);
+}
 
 /**
  * Centralized input validators
@@ -794,7 +996,7 @@ function errorBoundary(fn, errorMessage) {
 }
 
 // ═════════════════════════════════════════════════════════════
-// MODULE 3: TOAST NOTIFICATION SYSTEM
+// MODULE 5: TOAST NOTIFICATION SYSTEM
 // ═════════════════════════════════════════════════════════════
 
 const toast = {
@@ -829,7 +1031,7 @@ const toast = {
 };
 
 // ═════════════════════════════════════════════════════════════
-// MODULE 4: RATE LIMITER
+// MODULE 6: RATE LIMITER
 // ═════════════════════════════════════════════════════════════
 
 class AuthRateLimiter {
@@ -876,7 +1078,7 @@ const authRateLimiter = new AuthRateLimiter(
 );
 
 // ═════════════════════════════════════════════════════════════
-// MODULE 5: FIREBASE INITIALIZATION
+// MODULE 7: FIREBASE INITIALIZATION
 // ═════════════════════════════════════════════════════════════
 
 /**
@@ -899,10 +1101,11 @@ async function initializeFirebase() {
     };
 
     firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.database();
+    auth    = firebase.auth();
+    db      = firebase.firestore();
+    storage = firebase.storage();
 
-    Logger.log(Logger.levels.INFO, 'Firebase initialized successfully', null);
+    Logger.log(Logger.levels.INFO, 'Firebase initialized (Firestore + Storage)', null);
     setupAuthStateListener();
   } catch (error) {
     Logger.error('Firebase initialization failed', error);
@@ -1298,12 +1501,12 @@ document.querySelector('.tb-user')?.addEventListener('click', logout);
 // ═════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', function() {
-  Logger.log(Logger.levels.INFO, 'WORKRAIL v2.2 initializing', null);
+  Logger.log(Logger.levels.INFO, 'WORKRAIL v2.3 initializing', null);
 
   // Initialize Firebase
   initializeFirebase();
 
-  console.log('✓ WORKRAIL v2.2 initialization complete');
+  console.log('✓ WORKRAIL v2.3 initialization complete');
 });
 </script>
 </body>
