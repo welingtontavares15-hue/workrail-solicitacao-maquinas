@@ -1,0 +1,42 @@
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Cloud Functions
+functions/node_modules/
+functions/.env
+functions/.env.*
+
+# Credenciais
+.env
+.env.*
+*serviceAccount*.json
+*service-account*.json
+*credentials*.json
+*firebase-adminsdk*.json
+admin_firebase*.js
+criar_usuarios*.js
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/settings.json
+.idea/
+*.swp
+*~
+
+# Artefatos
+*.bak
+*.tmp
+*.log
+dist/
+build/
