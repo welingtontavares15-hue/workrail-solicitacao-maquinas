@@ -3,41 +3,26 @@
     "public": ".",
     "ignore": [
       "firebase.json",
+      "firestore.rules",
+      "firestore.indexes.json",
       "**/.*",
       "**/node_modules/**",
-      "**/*.docx",
-      "**/*.xlsx",
-      ".git",
-      ".github",
-      "Solicitações de maquina de lavar louças",
-      "*.md",
-      "Credenciais*",
-      "Guia*",
-      "INSTRUCOES*",
-      "RESUMO*",
-      "AVALIACAO*",
-      "FLUXO*",
-      "DATABASE*",
-      "PERFIS*",
-      "README*",
-      "CHANGELOG*",
-      "CONFIGURAR*",
-      "RELATORIO*",
-      "COMO_ACESSAR*",
-      "CORRECAO*",
-      "mudancas*",
-      "analise*",
-      "admin_firebase*",
-      "criar_usuarios*",
-      "*.bak",
+      "functions/**",
+      "**/*.md",
       "*.ps1",
-      "firebaseProxy.js",
-      "firestore.rules",
-      "IMPROVEMENTS_SUMMARY.md",
-      "DEPLOYMENT_GUIDE.md",
-      "PROJECT_STRUCTURE.md"
+      "firebaseProxy.js"
     ],
     "rewrites": [
+      {
+        "source": "/api/config",
+        "function": "getFirebaseConfig",
+        "region": "us-central1"
+      },
+      {
+        "source": "/api/health",
+        "function": "health",
+        "region": "us-central1"
+      },
       {
         "source": "**",
         "destination": "/workrail_v2.html"
@@ -47,46 +32,33 @@
       {
         "source": "**",
         "headers": [
-          {
-            "key": "X-Frame-Options",
-            "value": "DENY"
-          },
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          },
-          {
-            "key": "Referrer-Policy",
-            "value": "strict-origin-when-cross-origin"
-          },
-          {
-            "key": "Permissions-Policy",
-            "value": "camera=(), microphone=(), geolocation=()"
-          }
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+          { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
         ]
       },
       {
         "source": "**/*.html",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          },
-          {
-            "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.firebase.com wss://*.firebaseio.com https://formsubmit.co; frame-ancestors 'none'; base-uri 'self';"
-          }
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+          { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.firebase.com wss://*.firebaseio.com https://formsubmit.co; frame-src https://workrail-solenis.firebaseapp.com https://accounts.google.com; frame-ancestors 'self'; base-uri 'self';" }
         ]
       },
       {
         "source": "**/*.{js,css}",
         "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=3600"
-          }
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
         ]
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }
