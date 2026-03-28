@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "requestLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "_rateLimit",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "lastSeen", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
