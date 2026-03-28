@@ -1,343 +1,221 @@
 /**
  * WORKRAIL v2.3 Firestore Security Rules
  *
- * These rules enforce:
- * - Role-based access control (6 user roles)
- * - State machine: 15 formal statuses with allowed transitions
- * - Data validation on server-side
- * - Protection against injection and XSS
- * - Immutable audit trail via subcollections
+ * Estas regras implementam:
+ * - Controle de acesso baseado em papeis (6 roles via Custom Claims)
+ * - Maquina de estados: 15 status formais com transicoes permitidas por role
+ * - Validacao de dados no servidor (email, CPF, telefone, CNPJ)
+ * - Trilha de auditoria imutavel via subcolecoes
+ * - Bloqueio total de tudo que nao foi explicitamente liberado
  *
- * User Roles:
- * - super_admin: Full system access
- * - adm: Admin panel access
- * - gestor: Manager/workflow access
- * - vendas: Sales representative
- * - fornecedor_ebst: EBST supplier
- * - fornecedor_hobart: Hobart supplier
+ * Papeis (roles) - configurados via Custom Claims no Firebase Auth:
+ *   super_admin       -> Acesso total ao sistema
+ *   adm               -> Painel administrativo
+ *   gestor            -> Aprovacao e gestao de workflow
+ *   vendas            -> Criacao e envio de solicitacoes
+ *   fornecedor_ebst   -> Fornecedor EBST
+ *   fornecedor_hobart -> Fornecedor Hobart
  *
- * Data model (scalable):
- *   /solicitacoes/{id}                  – main document (current state + summary)
- *   /solicitacoes/{id}/movimentacoes    – immutable audit trail (subcollection)
- *   /solicitacoes/{id}/anexos           – attachment metadata (subcollection)
- *   /solicitacoes/{id}/notificacoes     – notification log (subcollection)
+ * Modelo de dados:
+ *   /users/{id}                            - perfis de usuario
+ *   /solicitacoes/{id}                     - solicitacoes (documento principal)
+ *   /solicitacoes/{id}/movimentacoes/{id}  - trilha de auditoria (imutavel)
+ *   /solicitacoes/{id}/anexos/{id}         - metadados de anexos (imutavel)
+ *   /solicitacoes/{id}/notificacoes/{id}   - log de notificacoes (imutavel)
+ *   /fornecedores/{id}                     - cadastro de fornecedores
+ *   /auditoria/{id}                        - log de auditoria global (imutavel)
+ *   /_rateLimit/{ip}                       - controle de rate limiting (escrita via Function)
+ *   /_health/{id}                          - health check (escrita via Function)
  *
- * Deploy with: firebase deploy --only firestore:rules
+ * Deploy:
+ *   firebase deploy --only firestore:rules
  */
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ═════════════════════════════════════════════════════════════
-    // HELPER FUNCTIONS
-    // ═════════════════════════════════════════════════════════════
-
-    /**
-     * Check if user is authenticated
-     */
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    /**
-     * Check if user has a specific role
-     */
     function hasRole(role) {
-      return isAuthenticated() &&
-             request.auth.token.role == role;
+      return isAuthenticated() && request.auth.token.role == role;
     }
 
-    /**
-     * Check if user has one of multiple roles
-     */
     function hasAnyRole(roles) {
-      return isAuthenticated() &&
-             request.auth.token.role in roles;
+      return isAuthenticated() && request.auth.token.role in roles;
     }
 
-    /**
-     * Check if user is the document owner
-     */
     function isDocumentOwner(userId) {
-      return isAuthenticated() &&
-             request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    /**
-     * Validate email format (RFC 5322 simplified)
-     */
     function isValidEmail(email) {
       return email != null &&
-             email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
-             email.size() <= 254;
+        email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
+        email.size() <= 254;
     }
 
-    /**
-     * Validate Brazilian CPF format (11 digits)
-     */
     function isValidCPF(cpf) {
       return cpf != null &&
-             (cpf.matches('^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$') ||
-              cpf.matches('^\\d{11}$')) &&
-             cpf.size() <= 14;
+        (cpf.matches('^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$') ||
+         cpf.matches('^\\d{11}$')) &&
+        cpf.size() <= 14;
     }
 
-    /**
-     * Validate Brazilian phone format
-     */
     function isValidPhone(phone) {
       return phone != null &&
-             phone.matches('^\\+?[\\d\\s\\-()]{10,}$') &&
-             phone.size() <= 20;
+        phone.matches('^\\+?[\\d\\s\\-()]{10,}$') &&
+        phone.size() <= 20;
     }
 
-    /**
-     * Validate request status against the 15 formal state-machine statuses
-     */
+    function isValidCNPJ(cnpj) {
+      return cnpj != null &&
+        (cnpj.matches('^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$') ||
+         cnpj.matches('^\\d{14}$')) &&
+        cnpj.size() <= 18;
+    }
+
     function isValidStatus(status) {
       return status in [
-        'rascunho',
-        'enviada_vendas',
-        'em_analise_gestor',
-        'ajuste_solicitado_gestor',
-        'reprovada_gestor',
-        'aprovada_gestor',
-        'em_analise_adm',
-        'encaminhada_fornecedor',
-        'aguardando_nf',
-        'nf_anexada',
-        'em_acompanhamento_logistico',
-        'instalacao_programada',
-        'instalacao_em_andamento',
-        'instalacao_concluida',
-        'finalizada'
+        'rascunho','enviada_vendas','em_analise_gestor',
+        'ajuste_solicitado_gestor','reprovada_gestor','aprovada_gestor',
+        'em_analise_adm','encaminhada_fornecedor','aguardando_nf',
+        'nf_anexada','em_acompanhamento_logistico','instalacao_programada',
+        'instalacao_em_andamento','instalacao_concluida','finalizada'
       ];
     }
 
-    /**
-     * Check whether a status transition is permitted for the requesting role.
-     * Keeps transition logic in one place so it can be enforced server-side.
-     */
+    function isRecentTimestamp(timestamp) {
+      return timestamp != null && timestamp <= request.time;
+    }
+
     function isAllowedTransition(fromStatus, toStatus, role) {
-      // vendas: draft → sent, or re-send after adjustment
       let vendas = role == 'vendas' &&
-        ((fromStatus == 'rascunho'                  && toStatus == 'enviada_vendas') ||
-         (fromStatus == 'ajuste_solicitado_gestor'  && toStatus == 'enviada_vendas'));
-
-      // gestor: analyse → approve / reject / request adjustment
+        ((fromStatus == 'rascunho' && toStatus == 'enviada_vendas') ||
+         (fromStatus == 'ajuste_solicitado_gestor' && toStatus == 'enviada_vendas'));
       let gestor = role == 'gestor' &&
-        ((fromStatus == 'enviada_vendas'       && toStatus == 'em_analise_gestor') ||
-         (fromStatus == 'em_analise_gestor'    && toStatus == 'aprovada_gestor') ||
-         (fromStatus == 'em_analise_gestor'    && toStatus == 'reprovada_gestor') ||
-         (fromStatus == 'em_analise_gestor'    && toStatus == 'ajuste_solicitado_gestor'));
-
-      // adm: receive from gestor, forward to supplier, track logistics/install
+        ((fromStatus == 'enviada_vendas' && toStatus == 'em_analise_gestor') ||
+         (fromStatus == 'em_analise_gestor' && toStatus == 'aprovada_gestor') ||
+         (fromStatus == 'em_analise_gestor' && toStatus == 'reprovada_gestor') ||
+         (fromStatus == 'em_analise_gestor' && toStatus == 'ajuste_solicitado_gestor'));
       let adm = role == 'adm' &&
-        ((fromStatus == 'aprovada_gestor'              && toStatus == 'em_analise_adm') ||
-         (fromStatus == 'em_analise_adm'               && toStatus == 'encaminhada_fornecedor') ||
-         (fromStatus == 'nf_anexada'                   && toStatus == 'em_acompanhamento_logistico') ||
-         (fromStatus == 'em_acompanhamento_logistico'  && toStatus == 'instalacao_programada') ||
-         (fromStatus == 'instalacao_programada'        && toStatus == 'instalacao_em_andamento') ||
-         (fromStatus == 'instalacao_em_andamento'      && toStatus == 'instalacao_concluida') ||
-         (fromStatus == 'instalacao_concluida'         && toStatus == 'finalizada'));
-
-      // supplier: acknowledge receipt, attach NF
+        ((fromStatus == 'aprovada_gestor' && toStatus == 'em_analise_adm') ||
+         (fromStatus == 'em_analise_adm' && toStatus == 'encaminhada_fornecedor') ||
+         (fromStatus == 'nf_anexada' && toStatus == 'em_acompanhamento_logistico') ||
+         (fromStatus == 'em_acompanhamento_logistico' && toStatus == 'instalacao_programada') ||
+         (fromStatus == 'instalacao_programada' && toStatus == 'instalacao_em_andamento') ||
+         (fromStatus == 'instalacao_em_andamento' && toStatus == 'instalacao_concluida') ||
+         (fromStatus == 'instalacao_concluida' && toStatus == 'finalizada'));
       let fornecedor = (role == 'fornecedor_ebst' || role == 'fornecedor_hobart') &&
         ((fromStatus == 'encaminhada_fornecedor' && toStatus == 'aguardando_nf') ||
-         (fromStatus == 'aguardando_nf'          && toStatus == 'nf_anexada'));
-
-      // super_admin can perform any valid transition
+         (fromStatus == 'aguardando_nf' && toStatus == 'nf_anexada'));
       let superAdmin = role == 'super_admin' && isValidStatus(toStatus);
-
       return vendas || gestor || adm || fornecedor || superAdmin;
     }
 
-    /**
-     * Validate CNPJ format (Brazilian company registration)
-     */
-    function isValidCNPJ(cnpj) {
-      return cnpj != null &&
-             (cnpj.matches('^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$') ||
-              cnpj.matches('^\\d{14}$')) &&
-             cnpj.size() <= 18;
-    }
-
-    /**
-     * Check if timestamp is recent (not from future)
-     */
-    function isRecentTimestamp(timestamp) {
-      return timestamp != null &&
-             timestamp <= request.time;
-    }
-
-    // ═════════════════════════════════════════════════════════════
-    // COLLECTIONS: USERS
-    // ═════════════════════════════════════════════════════════════
-
     match /users/{userId} {
-      // Users can read their own document
-      allow read: if isAuthenticated() &&
-                     (isDocumentOwner(userId) ||
-                      hasAnyRole(['super_admin', 'adm']));
-
-      // Only super_admin can create users
+      allow read: if isAuthenticated() && (isDocumentOwner(userId) || hasAnyRole(['super_admin', 'adm']));
       allow create: if hasRole('super_admin') &&
-                       isValidEmail(request.resource.data.email) &&
-                       request.resource.data.role in ['super_admin', 'adm', 'gestor', 'vendas', 'fornecedor_ebst', 'fornecedor_hobart'] &&
-                       request.resource.data.createdAt != null;
-
-      // Users can update their own data (limited fields)
+        isValidEmail(request.resource.data.email) &&
+        request.resource.data.role in ['super_admin','adm','gestor','vendas','fornecedor_ebst','fornecedor_hobart'] &&
+        request.resource.data.createdAt != null;
       allow update: if isDocumentOwner(userId) &&
-                       request.resource.data.keys().hasOnly(['name', 'phone', 'updatedAt']) &&
-                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
-                       isRecentTimestamp(request.resource.data.updatedAt);
-
-      // Only super_admin can update user roles or delete users
+        request.resource.data.keys().hasOnly(['name', 'phone', 'updatedAt']) &&
+        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+        isRecentTimestamp(request.resource.data.updatedAt);
       allow delete: if hasRole('super_admin');
     }
 
-    // ═════════════════════════════════════════════════════════════
-    // COLLECTIONS: SOLICITAÇÕES (REQUESTS)
-    // ═════════════════════════════════════════════════════════════
-
     match /solicitacoes/{requestId} {
-      // Authenticated users can read requests
       allow read: if isAuthenticated();
-
-      // Vendas, gestor, and admin can create requests (starts as rascunho or enviada_vendas)
-      allow create: if hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin']) &&
-                       isValidEmail(request.resource.data.email) &&
-                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
-                       (!('cpf' in request.resource.data) || isValidCPF(request.resource.data.cpf)) &&
-                       (!('cnpj' in request.resource.data) || isValidCNPJ(request.resource.data.cnpj)) &&
-                       isValidStatus(request.resource.data.statusAtual) &&
-                       request.resource.data.statusAtual in ['rascunho', 'enviada_vendas'] &&
-                       request.resource.data.createdAt != null &&
-                       request.resource.data.createdBy == request.auth.uid;
-
-      // Role-based status transition: enforced on every update that changes statusAtual
-      allow update: if (isDocumentOwner(resource.data.createdBy) ||
-                        hasAnyRole(['gestor', 'adm', 'super_admin',
-                                    'fornecedor_ebst', 'fornecedor_hobart'])) &&
-                       (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
-                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
-                       (!('statusAtual' in request.resource.data) || isValidStatus(request.resource.data.statusAtual)) &&
-                       (!('statusAtual' in request.resource.data) ||
-                         request.resource.data.statusAtual == resource.data.statusAtual ||
-                         isAllowedTransition(resource.data.statusAtual,
-                                             request.resource.data.statusAtual,
-                                             request.auth.token.role)) &&
-                       isRecentTimestamp(request.resource.data.updatedAt);
-
-      // Only admin can delete
+      allow create: if hasAnyRole(['vendas','gestor','adm','super_admin']) &&
+        isValidEmail(request.resource.data.email) &&
+        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+        (!('cpf' in request.resource.data) || isValidCPF(request.resource.data.cpf)) &&
+        (!('cnpj' in request.resource.data) || isValidCNPJ(request.resource.data.cnpj)) &&
+        isValidStatus(request.resource.data.statusAtual) &&
+        request.resource.data.statusAtual in ['rascunho', 'enviada_vendas'] &&
+        request.resource.data.createdAt != null &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update: if
+        (isDocumentOwner(resource.data.createdBy) ||
+          hasAnyRole(['gestor','adm','super_admin','fornecedor_ebst','fornecedor_hobart'])) &&
+        (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
+        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+        (!('statusAtual' in request.resource.data) || isValidStatus(request.resource.data.statusAtual)) &&
+        (!('statusAtual' in request.resource.data) ||
+          request.resource.data.statusAtual == resource.data.statusAtual ||
+          isAllowedTransition(resource.data.statusAtual, request.resource.data.statusAtual, request.auth.token.role)) &&
+        isRecentTimestamp(request.resource.data.updatedAt);
       allow delete: if hasAnyRole(['adm', 'super_admin']);
     }
-
-    // ═════════════════════════════════════════════════════════════
-    // COLLECTIONS: FORNECEDORES (SUPPLIERS)
-    // ═════════════════════════════════════════════════════════════
 
     match /fornecedores/{supplierId} {
-      // All authenticated users can read suppliers
       allow read: if isAuthenticated();
-
-      // Only admin can create/edit suppliers
-      allow create: if hasAnyRole(['adm', 'super_admin']) &&
-                       isValidCNPJ(request.resource.data.cnpj) &&
-                       isValidEmail(request.resource.data.email) &&
-                       isValidPhone(request.resource.data.phone) &&
-                       request.resource.data.status in ['active', 'inactive', 'suspended'] &&
-                       request.resource.data.createdAt != null;
-
-      // Only admin can update suppliers
-      allow update: if hasAnyRole(['adm', 'super_admin']) &&
-                       (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
-                       (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
-                       isRecentTimestamp(request.resource.data.updatedAt);
-
-      // Only admin can delete
+      allow create: if hasAnyRole(['adm','super_admin']) &&
+        isValidCNPJ(request.resource.data.cnpj) &&
+        isValidEmail(request.resource.data.email) &&
+        isValidPhone(request.resource.data.phone) &&
+        request.resource.data.status in ['active','inactive','suspended'] &&
+        request.resource.data.createdAt != null;
+      allow update: if hasAnyRole(['adm','super_admin']) &&
+        (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
+        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+        isRecentTimestamp(request.resource.data.updatedAt);
       allow delete: if hasAnyRole(['adm', 'super_admin']);
     }
 
-    // ═════════════════════════════════════════════════════════════
-    // COLLECTIONS: AUDITORIA (AUDIT LOG)
-    // ═════════════════════════════════════════════════════════════
-
     match /auditoria/{auditId} {
-      // Only admin can read audit logs
       allow read: if hasAnyRole(['adm', 'super_admin']);
-
-      // System can write audit logs (immutable – no update/delete)
       allow create: if isAuthenticated() &&
-                       request.resource.data.userId != null &&
-                       request.resource.data.action != null &&
-                       request.resource.data.timestamp != null;
-
-      // No updates or deletes to audit logs (immutable)
+        request.resource.data.userId != null &&
+        request.resource.data.action != null &&
+        request.resource.data.timestamp != null;
       allow update, delete: if false;
     }
-
-    // ═════════════════════════════════════════════════════════════
-    // SUBCOLLECTION: MOVIMENTAÇÕES (immutable workflow audit trail)
-    // ═════════════════════════════════════════════════════════════
 
     match /solicitacoes/{requestId}/movimentacoes/{movId} {
-      // Any authenticated user who can read the parent may read its history
       allow read: if isAuthenticated();
-
-      // Only authenticated users with a workflow role may append a movement;
-      // movements are immutable once written
       allow create: if isAuthenticated() &&
-                       hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin',
-                                   'fornecedor_ebst', 'fornecedor_hobart']) &&
-                       request.resource.data.actorUid == request.auth.uid &&
-                       request.resource.data.at != null &&
-                       request.resource.data.fromStatus != null &&
-                       request.resource.data.toStatus != null &&
-                       isValidStatus(request.resource.data.fromStatus) &&
-                       isValidStatus(request.resource.data.toStatus);
-
+        hasAnyRole(['vendas','gestor','adm','super_admin','fornecedor_ebst','fornecedor_hobart']) &&
+        request.resource.data.actorUid == request.auth.uid &&
+        request.resource.data.at != null &&
+        request.resource.data.fromStatus != null &&
+        request.resource.data.toStatus != null &&
+        isValidStatus(request.resource.data.fromStatus) &&
+        isValidStatus(request.resource.data.toStatus);
       allow update, delete: if false;
     }
-
-    // ═════════════════════════════════════════════════════════════
-    // SUBCOLLECTION: ANEXOS (attachment metadata)
-    // ═════════════════════════════════════════════════════════════
 
     match /solicitacoes/{requestId}/anexos/{anexoId} {
       allow read: if isAuthenticated();
-
-      // The user who uploads the file creates the metadata record
       allow create: if isAuthenticated() &&
-                       hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin',
-                                   'fornecedor_ebst', 'fornecedor_hobart']) &&
-                       request.resource.data.uploadedBy == request.auth.uid &&
-                       request.resource.data.tipo != null &&
-                       request.resource.data.storagePath != null &&
-                       request.resource.data.uploadedAt != null;
-
-      // Attachments are immutable once recorded (Storage object is never deleted here)
+        hasAnyRole(['vendas','gestor','adm','super_admin','fornecedor_ebst','fornecedor_hobart']) &&
+        request.resource.data.uploadedBy == request.auth.uid &&
+        request.resource.data.tipo != null &&
+        request.resource.data.storagePath != null &&
+        request.resource.data.uploadedAt != null;
       allow update, delete: if false;
     }
-
-    // ═════════════════════════════════════════════════════════════
-    // SUBCOLLECTION: NOTIFICAÇÕES (notification dispatch log)
-    // ═════════════════════════════════════════════════════════════
 
     match /solicitacoes/{requestId}/notificacoes/{notifId} {
       allow read: if hasAnyRole(['adm', 'super_admin']);
-
       allow create: if isAuthenticated() &&
-                       request.resource.data.sentAt != null &&
-                       request.resource.data.event != null;
-
+        request.resource.data.sentAt != null &&
+        request.resource.data.event != null;
       allow update, delete: if false;
     }
 
-    // ═════════════════════════════════════════════════════════════
-    // DEFAULT: DENY ALL
-    // ═════════════════════════════════════════════════════════════
+    match /_rateLimit/{docId} {
+      allow read, write: if false;
+    }
+
+    match /_health/{docId} {
+      allow read, write: if false;
+    }
 
     match /{document=**} {
       allow read, write: if false;
