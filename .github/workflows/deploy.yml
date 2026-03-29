@@ -6,6 +6,11 @@ on:
     branches:
       - main
 
+  # Validação + preview em pull requests
+  pull_request:
+    branches:
+      - main
+
   # Deploy manual com opções
   workflow_dispatch:
     inputs:
@@ -101,6 +106,7 @@ jobs:
     name: Deploy Firebase
     runs-on: ubuntu-latest
     needs: validate
+    if: github.event_name != 'pull_request'
     environment: production
 
     steps:
