@@ -6,22 +6,24 @@ labels: bug
 assignees: ''
 ---
 
-## Descricao do bug
-<!-- Descricao clara do problema -->
+## Descrição do bug
+<!-- Descrição clara e concisa do problema -->
 
 ## Como reproduzir
 1. ...
 2. ...
 
 ## Comportamento esperado
+<!-- O que deveria acontecer -->
 
 ## Comportamento atual
+<!-- O que acontece de fato -->
 
 ## Ambiente
 - Navegador:
-- Papel (role):
+- Papel (role) do usuário:
 - URL afetada:
-- Horario:
+- Horário aproximado:
 
-## Logs / capturas
-<!-- Cole erros do console (F12) -->
+## Logs / capturas de tela
+<!-- Cole erros do console (F12) ou screenshots -->

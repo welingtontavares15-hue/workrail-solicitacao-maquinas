@@ -9,19 +9,20 @@
 
 ### firebase.json — 4 problemas críticos
 1. **Sem seção `functions`** → impossível fazer `firebase deploy --only functions`
-2. **Sem rewrites para `/api/config` e `/api/health`** → a Cloud Function existe mas nunca é chamada via Hosting
+2. **Sem rewrites para `/api/config` e `/api/health`** → a Cloud Function existe mas nunca é chamada via Hosting; o frontend provavelmente usa URL direta hardcoded
 3. **Sem seção `firestore`** → `firebase deploy --only firestore:rules` falha sem apontar o arquivo
 4. **`X-Frame-Options: DENY`** → quebra Firebase Auth que usa iframes para autenticação; deve ser `SAMEORIGIN`
 
 ### firebaseProxy.js — 5 problemas
-1. **Arquivo na raiz do repositório**, não em `functions/` → Firebase não consegue fazer deploy das funções
+1. **Arquivo na raiz do repositório**, não em `functions/` → Firebase não consegue fazer deploy das funções sem a estrutura `functions/index.js`
 2. **Ausência de `functions/package.json`** → deploy falha com "missing package.json in functions directory"
 3. **`cors` declarado como dependência mas sem `package.json`** → erro de runtime "Cannot find module 'cors'"
-4. **Rate limiting em memória (`new Map()`)** → não persiste entre cold starts, não funciona com múltiplas instâncias
+4. **Rate limiting em memória (`new Map()`)** → não persiste entre cold starts, não funciona com múltiplas instâncias simultâneas
 5. **`cleanupRequestLog` limpa apenas memória** → a coleção `_rateLimit` no Firestore nunca é limpa (leak de dados)
+6. **`messagingSenderId: "000000000000"` e `appId` são placeholders** → frontend recebe configuração incorreta
 
 ### .firebaserc — ausente
-- Arquivo não existe no repositório → `firebase use workrail-solenis` falha no CI/CD
+- Arquivo não existe no repositório → `firebase use workrail-solenis` falha no CI/CD sem autenticação prévia manual
 
 ### deploy.ps1 — 2 problemas
 - Header diz "WORKRAIL v2.1" enquanto o projeto está em v2.3
@@ -38,21 +39,18 @@
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `firebase.json` | **Alterado** | Adicionado seções `functions` e `firestore`; rewrites `/api/config` e `/api/health`; corrigido `X-Frame-Options: DENY` → `SAMEORIGIN` |
-| `functions/index.js` | **Criado** | Reorganização do `firebaseProxy.js` para estrutura padrão Firebase Functions Gen 2; rate limiting via Firestore |
+| `firebase.json` | **Alterado** | Adicionado seções `functions` e `firestore`; adicionados rewrites `/api/config` e `/api/health` antes do catch-all SPA; corrigido `X-Frame-Options: DENY` → `SAMEORIGIN` |
+| `functions/index.js` | **Criado** | Reorganização do `firebaseProxy.js` para estrutura padrão Firebase Functions; rate limiting migrado para Firestore (persistente); `cleanupRequestLog` agora limpa Firestore; CORS inclui `localhost:5000`; variáveis de ambiente documentadas |
 | `functions/package.json` | **Criado** | Declara todas as dependências: `cors`, `firebase-admin`, `firebase-functions`; engines Node.js 18 |
 | `.firebaserc` | **Criado** | Aponta default para `workrail-solenis` |
-| `firestore.rules` | **Atualizado** | Adicionadas regras para `_rateLimit` e `_health` (somente Admin SDK) |
-| `firestore.indexes.json` | **Criado** | Indexes para `requestLog` (timestamp) e `_rateLimit` (lastSeen) |
-| `deploy.ps1` | **Atualizado** | Versão bumped para v2.3; suporte a `-FunctionsOnly`, `-RulesOnly`, `-HostingOnly` |
-| `.gitignore` | **Criado** | Ignora `.env`, credenciais JSON, `node_modules/`, `.firebase/`, artefatos temporários |
-| `.github/workflows/deploy.yml` | **Criado** | CI/CD: validação + deploy automático em push para `main` + workflow_dispatch + preview channels |
+| `firestore.rules` | **Atualizado** | Adicionadas regras para `_rateLimit` e `_health` (somente Admin SDK); estrutura original preservada integralmente |
+| `firestore.indexes.json` | **Criado** | Indexes para `requestLog` (timestamp) e `workrail` (createdBy + createdAt) |
+| `deploy.ps1` | **Atualizado** | Versão bumped para v2.3; suporte a `-FunctionsOnly`, `-RulesOnly`, `-HostingOnly`; deploy completo como padrão (Functions → Rules → Hosting); validação de `FIREBASE_API_KEY` antes do deploy |
+| `.gitignore` | **Criado** | Ignora `.env`, credenciais JSON, `node_modules/`, `.firebase/`, artefatos temporários e arquivos legados do projeto |
+| `.github/workflows/deploy.yml` | **Criado** | CI/CD: validação de estrutura + deploy completo automático em push para `main` + workflow_dispatch com alvo selecionável + preview channels em PRs + health check pós-deploy |
 | `.github/pull_request_template.md` | **Criado** | Template de PR com checklist de segurança |
 | `.github/ISSUE_TEMPLATE/bug_report.md` | **Criado** | Template de bug report |
 | `.github/ISSUE_TEMPLATE/change_request.md` | **Criado** | Template de solicitação de mudança |
-| `DEPLOY_SUMMARY.md` | **Criado** | Resumo de arquitetura de deploy, comandos, rollback e URLs |
-| `FIREBASE_MANUAL_CHECKLIST.md` | **Criado** | Checklist detalhado de configuração manual do Firebase |
-| `GITHUB_SETUP.md` | **Criado** | Guia completo de configuração do GitHub: secrets, permissões, branches |
 
 ---
 
@@ -84,7 +82,7 @@ Detalhes completos: **FIREBASE_MANUAL_CHECKLIST.md**
 
 ## Checklist de validação final
 
-- [ ] `firebase.json` válido (node: `node -e "JSON.parse(require('fs').readFileSync('firebase.json','utf8'))""`)
+- [ ] `firebase.json` válido (node: `node -e "JSON.parse(require('fs').readFileSync('firebase.json','utf8'))"`)
 - [ ] `functions/package.json` válido e todas as dependências declaradas
 - [ ] `functions/index.js` sintaxe válida (node: `node --check functions/index.js`)
 - [ ] `.firebaserc` aponta para `workrail-solenis`

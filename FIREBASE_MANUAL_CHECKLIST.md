@@ -54,11 +54,12 @@ gcloud secrets add-iam-policy-binding FIREBASE_API_KEY \
 
 **Opção B — Variável de ambiente direto no deploy:**
 ```bash
+# Via gcloud (para atualizar variáveis de uma function específica)
 gcloud functions deploy getFirebaseConfig \
   --gen2 \
   --runtime nodejs18 \
   --region us-central1 \
-  --set-env-vars FIREBASE_API_KEY="AIzaSy...",FIREBASE_MESSAGING_SENDER_ID=123456789,FIREBASE_APP_ID=1:123:web:abc
+  --set-env-vars FIREBASE_API_KEY="AIzaSy...,FIREBASE_MESSAGING_SENDER_ID=123456789,FIREBASE_APP_ID=1:123:web:abc"
 ```
 
 **Opção C — Para testes locais com emulator:**
@@ -73,7 +74,7 @@ FIREBASE_APP_ID=1:123456789:web:abc123
 
 ## 4. Custom Claims (Roles)
 
-Os papéis dos usuários são implementados via **Firebase Custom Claims**.
+Os papéis dos usuários são implementados via **Firebase Custom Claims**. Eles NÃO são definidos pelas Firestore Rules — são injetados no token de autenticação pelo backend.
 
 **Papéis disponíveis:**
 | Role | Permissões |
@@ -180,7 +181,7 @@ curl -s https://workrail-solenis.web.app/api/health | python3 -m json.tool
 # Teste da config (deve retornar JSON sem placeholder)
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{}'  \
+  -d '{}' \
   https://workrail-solenis.web.app/api/config | python3 -m json.tool
 ```
 

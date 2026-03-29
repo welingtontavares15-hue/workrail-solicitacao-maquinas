@@ -14,14 +14,14 @@ GitHub (push → main)
     ▼
 GitHub Actions — .github/workflows/deploy.yml
     │
-    ├► firebase deploy --only functions   (Cloud Functions Gen 2, us-central1)
+    ├─► firebase deploy --only functions   (Cloud Functions Gen 2, us-central1)
     │       └─ getFirebaseConfig  → /api/config
     │       └─ health             → /api/health
     │       └─ cleanupRequestLog  → agendado a cada 1 hora
     │
-    ├► firebase deploy --only firestore   (Rules + Indexes)
+    ├─► firebase deploy --only firestore   (Rules + Indexes)
     │
-    └► firebase deploy --only hosting     (SPA → workrail_v2.html)
+    └─► firebase deploy --only hosting     (SPA → workrail_v2.html)
             └─ https://workrail-solenis.web.app
             └─ https://workrail-solenis.firebaseapp.com
 ```
@@ -119,7 +119,7 @@ curl -s https://workrail-solenis.web.app/api/health
 # 2. Config endpoint
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{}'  \
+  -d '{}' \
   https://workrail-solenis.web.app/api/config
 
 # Resposta esperada:

@@ -1,21 +1,21 @@
 ---
-name: Solicitacao de Mudanca
-about: Propor alteracao ou melhoria no sistema
-title: "[MUDANCA] "
+name: Solicitação de Mudança
+about: Propor alteração ou melhoria no sistema
+title: "[MUDANÇA] "
 labels: enhancement
 assignees: ''
 ---
 
-## Descricao da mudanca
-<!-- O que deve ser alterado e por que -->
+## Descrição da mudança
+<!-- O que deve ser alterado e por quê -->
 
-## Justificativa de negocio
+## Justificativa de negócio
 <!-- Qual problema isso resolve? -->
 
 ## Impacto esperado
-- Usuarios afetados:
-- Modulos afetados (Hosting / Functions / Firestore Rules):
-- Risco estimado: [ ] Baixo  [ ] Medio  [ ] Alto
+- Usuários afetados:
+- Módulos afetados (Hosting / Functions / Firestore Rules):
+- Risco estimado: [ ] Baixo  [ ] Médio  [ ] Alto
 
 ## Alternativas consideradas
 <!-- Outras abordagens descartadas -->

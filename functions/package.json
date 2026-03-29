@@ -1,8 +1,10 @@
 {
   "name": "workrail-functions",
   "version": "2.3.0",
-  "description": "Cloud Functions WORKRAIL (workrail-solenis) - Gen 2",
-  "engines": { "node": "18" },
+  "description": "Cloud Functions para o WORKRAIL (workrail-solenis) — Gen 2",
+  "engines": {
+    "node": "18"
+  },
   "main": "index.js",
   "scripts": {
     "serve": "firebase emulators:start --only functions",

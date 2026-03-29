@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WORKRAIL v2.2 — Gestão de Solicitação AS&TS · Solenis Brasil</title>
+<title>WORKRAIL v2.3 — Gestão de Solicitação AS&TS · Solenis Brasil</title>
 <meta name="description" content="Sistema de Gestão de Solicitação AS&TS - Solenis Brasil. Controle de máquinas de lavar louças, comodatos e instalações.">
 <meta name="theme-color" content="#0e7b82">
 <meta name="robots" content="noindex, nofollow">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
-<meta http-equiv="X-Frame-Options" content="DENY">
 <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e7b82'/%3E%3Cpath d='M5 26V11l11-7 11 7v15l-11 7L5 26z' stroke='white' stroke-width='2.5' fill='none'/%3E%3Cpath d='M16 4V32M5 11l11 6 11-6' stroke='white' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -908,7 +907,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
     <div class="login-footer">
       <a href="#" onclick="abrirRecuperarSenha(event)" style="color:#0e7b82;font-weight:600;text-decoration:none">Esqueceu a senha?</a> &nbsp;·&nbsp;
       Contate o administrador<br>
-      <strong style="color:#607d8b">Solenis Brasil · WORKRAIL v2.2</strong>
+      <strong style="color:#607d8b">Solenis Brasil · WORKRAIL v2.3</strong>
     </div>
   </div>
 </div>
@@ -945,7 +944,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
     <div class="tb-logomark">
       <svg viewBox="0 0 15 15" fill="none"><path d="M2 12V5l5.5-3.5L13 5v7l-5.5 3.5L2 12z" stroke="white" stroke-width="1.3" fill="none"/><path d="M7.5 1.5V15M2 5l5.5 3 5.5-3" stroke="white" stroke-width="1" stroke-linecap="round"/></svg>
     </div>
-    <div class="tb-logotext">WORKRAIL<span>AS&amp;TS v2.2</span></div>
+    <div class="tb-logotext">WORKRAIL<span>AS&amp;TS v2.3</span></div>
   </div>
   <div class="tb-breadcrumb" id="breadcrumb">
     <span class="tb-bc-item active">Início</span>
@@ -1074,7 +1073,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <div class="home-wrap">
           <div class="home-bg-circle"></div>
           <div class="home-bg-circle2"></div>
-          <div class="home-version">v2.2 · Solenis Brasil</div>
+          <div class="home-version">v2.3 · Solenis Brasil</div>
           <div class="home-badge">✨ Gestão de Solicitação AS&amp;TS</div>
           <div class="home-logo">WORKRAIL</div>
           <div class="home-sub">Plataforma de Controle de Máquinas de Lavar Louças · Solenis Brasil</div>
@@ -1386,7 +1385,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
                 <span class="fc-title">Informações do Sistema</span>
               </div>
               <div class="fc-body c1" style="padding-top:2px">
-                <div class="cfg-info-row"><span class="cfg-info-key">Versão</span><span class="cfg-info-val">WORKRAIL v2.2.0</span></div>
+                <div class="cfg-info-row"><span class="cfg-info-key">Versão</span><span class="cfg-info-val">WORKRAIL v2.3.0</span></div>
                 <div class="cfg-info-row"><span class="cfg-info-key">Empresa</span><span class="cfg-info-val" style="font-family:'DM Sans',sans-serif;font-size:12.5px">Solenis Brasil</span></div>
                 <div class="cfg-info-row"><span class="cfg-info-key">Firebase</span><span class="cfg-info-val" id="cfg-firebase-status">Verificando...</span></div>
                 <div class="cfg-info-row"><span class="cfg-info-key">Usuário logado</span><span class="cfg-info-val" id="cfg-usuario-logado" style="font-family:'DM Sans',sans-serif;font-size:12px">—</span></div>
@@ -1882,7 +1881,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
 
 <script>
 // ════════════════════════════════════════════════════════════
-// WORKRAIL v2.2.0 — Firebase + FormSubmit Integration Layer
+// WORKRAIL v2.3.0 — Firebase + FormSubmit Integration Layer
 // Solenis Brasil · Sistema de Gestão de Solicitação AS&TS
 // ════════════════════════════════════════════════════════════
 
@@ -1930,16 +1929,9 @@ function showLoading(show) {
 
 
 // ─── FIREBASE CONFIGURATION ──────────────────────────────────
-// !! IMPORTANTE: Substitua pelos dados reais do seu projeto Firebase !!
-// Crie o projeto em https://console.firebase.google.com
-const FIREBASE_CONFIG = {
-  apiKey:            "SUA_API_KEY_AQUI",
-  authDomain:        "SEU-PROJETO.firebaseapp.com",
-  projectId:         "SEU-PROJETO-ID",
-  storageBucket:     "SEU-PROJETO.appspot.com",
-  messagingSenderId: "000000000000",
-  appId:             "1:000000000000:web:0000000000000000"
-};
+// Configuração carregada dinamicamente via Cloud Function GET /api/config
+// Não edite os valores abaixo — eles são preenchidos em runtime.
+let FIREBASE_CONFIG = null;
 
 // ─── FORMSUBMIT CONFIGURATION ────────────────────────────────
 // Substitua pelo e-mail principal que receberá as notificações
@@ -2010,20 +2002,42 @@ let currentFlow = null;
 let visitedFlow = new Set();
 
 // ════════════════════════════════════════════════════════════
-// FIREBASE — INICIALIZAÇÃO
+// FIREBASE — INICIALIZAÇÃO VIA /api/config
 // ════════════════════════════════════════════════════════════
-function initFirebase() {
+
+/**
+ * Busca a configuração do Firebase na Cloud Function /api/config,
+ * inicializa o SDK e registra o observer de autenticação.
+ * Em caso de falha, exibe mensagem de erro — nunca faz bypass de auth.
+ */
+async function initFirebase() {
+  if (typeof firebase === 'undefined') {
+    console.error('[WORKRAIL] Firebase SDK não carregado.');
+    mostrarErroInicializacao('Firebase SDK não disponível. Verifique sua conexão e recarregue a página.');
+    return;
+  }
+
   try {
-    if (typeof firebase === 'undefined') {
-      console.warn('[WORKRAIL] Firebase SDK não carregado. Modo offline ativo.');
-      mostrarAppSemLogin('super_admin');
-      return;
+    showLoading(true);
+
+    // ── Busca configuração na Cloud Function ─────────────────
+    const resp = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Falha ao obter configuração do servidor (HTTP ${resp.status})`);
     }
-    if (FIREBASE_CONFIG.apiKey === 'SUA_API_KEY_AQUI') {
-      console.warn('[WORKRAIL] Firebase não configurado. Modo offline ativo.');
-      mostrarAppSemLogin('super_admin');
-      return;
+
+    FIREBASE_CONFIG = await resp.json();
+
+    if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.projectId) {
+      throw new Error('Configuração Firebase incompleta recebida do servidor.');
     }
+
+    // ── Inicializa o Firebase com a config real ───────────────
     firebase.initializeApp(FIREBASE_CONFIG);
     db      = firebase.firestore();
     storage = firebase.storage();
@@ -2031,39 +2045,40 @@ function initFirebase() {
     firebaseOk = true;
     console.log('[WORKRAIL] Firebase inicializado com sucesso.');
 
-    // ── Observa estado de autenticação ──────────────────────
+    // ── Observa estado de autenticação ───────────────────────
     auth.onAuthStateChanged(async (user) => {
+      showLoading(false);
       if (user) {
-        // Carrega perfil do usuário no Firestore
         await carregarPerfilUsuario(user);
       } else {
-        // Não autenticado — mostra tela de login
         currentUser = null;
         document.getElementById('login-overlay').classList.remove('hidden');
       }
     });
 
   } catch(e) {
+    showLoading(false);
     console.error('[WORKRAIL] Erro ao inicializar Firebase:', e);
-    mostrarAppSemLogin('super_admin');
+    mostrarErroInicializacao(
+      'Não foi possível conectar ao servidor. ' +
+      'Verifique sua conexão com a internet e tente novamente.<br>' +
+      '<small style="opacity:.7">Detalhe: ' + (e.message || e) + '</small>'
+    );
   }
 }
 
-// Fallback: executa sem login (modo offline/desenvolvimento)
-function mostrarAppSemLogin(perfilOverride) {
-  const perfil = perfilOverride || 'adm';
-  const nomes = { super_admin:'Administrador', adm:'ADM Vendas', gestor:'Gestor',
-                  vendas:'Vendas', fornecedor_ebst:'Fornecedor EBST', fornecedor_hobart:'Fornecedor Hobart' };
-  currentUser = {
-    uid: 'offline',
-    nome: nomes[perfil] || 'Usuário Demo',
-    email: 'demo@workrail.dev',
-    perfil: perfil,
-    fornecedor: perfil === 'fornecedor_ebst' ? 'EBST' : perfil === 'fornecedor_hobart' ? 'Hobart Brasil' : null
-  };
-  document.getElementById('login-overlay').classList.add('hidden');
-  aplicarPerfilNaInterface();
-  carregarHistoricoFirebase();
+/**
+ * Exibe mensagem de erro crítico de inicialização na tela de login.
+ * Nunca concede acesso ao sistema sem autenticação real.
+ */
+function mostrarErroInicializacao(mensagem) {
+  const overlay = document.getElementById('login-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+  const errEl = document.getElementById('loginError');
+  if (errEl) {
+    errEl.innerHTML = '⚠️ ' + mensagem;
+    errEl.style.display = 'block';
+  }
 }
 
 
@@ -4377,75 +4392,9 @@ function init(){
 init();
 
 /* ════════════════════════════════════════════════════════════
-   FIRESTORE SECURITY RULES — Cole no Console Firebase
-   https://console.firebase.google.com → Firestore → Rules
-   ════════════════════════════════════════════════════════════
-
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
-    // ── Função auxiliar: obtém perfil do usuário logado
-    function perfil() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil;
-    }
-    function isFornecedorEBST() {
-      return perfil() == 'fornecedor_ebst';
-    }
-    function isFornecedorHobart() {
-      return perfil() == 'fornecedor_hobart';
-    }
-    function isFornecedor() {
-      return isFornecedorEBST() || isFornecedorHobart();
-    }
-    function isInterno() {
-      return perfil() in ['vendas','gestor','adm'];
-    }
-
-    // ── Coleção de usuários: cada um lê o próprio perfil; admin gerencia
-    match /usuarios/{uid} {
-      allow read:  if request.auth.uid == uid || perfil() == 'adm';
-      allow write: if perfil() == 'adm';
-    }
-
-    // ── Solicitações
-    match /solicitacoes/{docId} {
-
-      // Internos (vendas/gestor/adm): acesso total
-      allow read, write: if request.auth != null && isInterno();
-
-      // Fornecedor EBST: lê e edita SOMENTE solicitações do seu fornecedor
-      allow read:   if request.auth != null && isFornecedorEBST()
-                    && resource.data.dadosAdm.fornecedor == 'EBST';
-      allow update: if request.auth != null && isFornecedorEBST()
-                    && resource.data.dadosAdm.fornecedor == 'EBST'
-                    && request.resource.data.dadosAdm.fornecedor == 'EBST';
-
-      // Fornecedor Hobart: lê e edita SOMENTE solicitações do seu fornecedor
-      allow read:   if request.auth != null && isFornecedorHobart()
-                    && resource.data.dadosAdm.fornecedor == 'Hobart Brasil';
-      allow update: if request.auth != null && isFornecedorHobart()
-                    && resource.data.dadosAdm.fornecedor == 'Hobart Brasil'
-                    && request.resource.data.dadosAdm.fornecedor == 'Hobart Brasil';
-
-      // Ninguém cria ou deleta solicitações sem ser interno
-      allow create, delete: if request.auth != null && isInterno();
-    }
-  }
-}
-
-   ════════════════════════════════════════════════════════════
-   COMO CRIAR USUÁRIOS NO FIREBASE:
-   1. Firebase Console → Authentication → Users → Add user
-   2. Informe e-mail e senha
-   3. Copie o UID gerado
-   4. Firestore → Collection 'usuarios' → Add document (ID = UID)
-   5. Campos:
-      nome:       "Nome Completo"
-      email:      "email@dominio.com"
-      perfil:     "vendas" | "gestor" | "adm" | "fornecedor_ebst" | "fornecedor_hobart"
-      fornecedor: "EBST" | "Hobart Brasil" | null
-      ativo:      true
+   As regras de segurança do Firestore estão no arquivo:
+   firestore.rules (na raiz do repositório)
+   Deploy: firebase deploy --only firestore
    ════════════════════════════════════════════════════════════ */
 </script>
 </body>

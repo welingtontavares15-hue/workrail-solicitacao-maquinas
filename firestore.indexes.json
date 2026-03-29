@@ -1,17 +1,19 @@
 {
   "indexes": [
     {
-      "collectionGroup": "requestLog",
+      "collectionGroup": "solicitacoes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "timestamp", "order": "ASCENDING" }
+        { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "_rateLimit",
+      "collectionGroup": "solicitacoes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "lastSeen", "order": "ASCENDING" }
+        { "fieldPath": "statusAtual", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

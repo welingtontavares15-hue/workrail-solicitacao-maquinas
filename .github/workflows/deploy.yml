@@ -1,8 +1,12 @@
 name: WORKRAIL — Deploy Firebase
 
 on:
+  # Deploy automático em push para main
   push:
-    branches: [main]
+    branches:
+      - main
+
+  # Deploy manual com opções
   workflow_dispatch:
     inputs:
       target:
@@ -10,98 +14,193 @@ on:
         required: true
         default: "all"
         type: choice
-        options: [all, hosting, functions, rules]
+        options:
+          - all
+          - hosting
+          - functions
+          - rules
 
+# ─── Permissões mínimas necessárias ─────────────────────────────────────────
 permissions:
   contents: read
-  id-token: write
+  id-token: write   # Para autenticação via Workload Identity (opcional)
 
 jobs:
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 1: Validação
+  # ──────────────────────────────────────────────────────────────────────────
   validate:
-    name: Validacao do repositorio
+    name: Validação do repositório
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: functions/package-lock.json
-      - name: Instalar dependencias
+
+      - name: Instalar dependências das Cloud Functions
         working-directory: functions
         run: npm ci
-      - name: Verificar arquivos obrigatorios
+
+      - name: Verificar arquivos obrigatórios
         run: |
-          for f in firebase.json firestore.rules firestore.indexes.json .firebaserc functions/index.js functions/package.json workrail_v2.html; do
-            [ -f "$f" ] && echo "OK $f" || (echo "FALTANDO: $f" && exit 1)
+          echo "Verificando estrutura do repositório..."
+          required_files=(
+            "firebase.json"
+            "firestore.rules"
+            "firestore.indexes.json"
+            ".firebaserc"
+            "functions/index.js"
+            "functions/package.json"
+            "workrail_v2.html"
+          )
+          for f in "${required_files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "❌ ARQUIVO OBRIGATÓRIO AUSENTE: $f"
+              exit 1
+            fi
+            echo "✅ $f"
           done
+
+      - name: Verificar secrets ausentes no código
+        run: |
+          echo "Verificando por credenciais hardcoded..."
+          # Bloqueia commit com padrões de API key real (não placeholder)
+          if grep -rE '"apiKey":\s*"AIzaSy[0-9A-Za-z_-]{33}"' workrail_v2.html 2>/dev/null; then
+            echo "❌ API KEY hardcoded encontrada em workrail_v2.html!"
+            exit 1
+          fi
+          echo "✅ Nenhuma credencial hardcoded detectada"
+
       - name: Validar firebase.json
         run: |
+          echo "Validando firebase.json..."
           node -e "
-            const c = JSON.parse(require('fs').readFileSync('firebase.json','utf8'));
-            if (!c.functions) throw new Error('functions ausente');
-            if (!c.firestore) throw new Error('firestore ausente');
-            const rw = c.hosting.rewrites || [];
-            if (!rw.some(r => r.source === '/api/config')) throw new Error('api/config ausente');
-            console.log('firebase.json valido');
+            const cfg = JSON.parse(require('fs').readFileSync('firebase.json', 'utf8'));
+            if (!cfg.hosting) throw new Error('Seção hosting ausente');
+            if (!cfg.functions) throw new Error('Seção functions ausente');
+            if (!cfg.firestore) throw new Error('Seção firestore ausente');
+            const rewrites = cfg.hosting.rewrites || [];
+            const hasApiConfig = rewrites.some(r => r.source === '/api/config');
+            const hasApiHealth = rewrites.some(r => r.source === '/api/health');
+            if (!hasApiConfig) throw new Error('Rewrite /api/config ausente');
+            if (!hasApiHealth) throw new Error('Rewrite /api/health ausente');
+            console.log('✅ firebase.json válido');
           "
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 2: Deploy (só roda após validação)
+  # ──────────────────────────────────────────────────────────────────────────
   deploy:
     name: Deploy Firebase
     runs-on: ubuntu-latest
     needs: validate
     environment: production
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
-      - run: npm install -g firebase-tools
-      - name: Instalar deps functions
+          cache: "npm"
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Instalar Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Instalar dependências das Cloud Functions
         working-directory: functions
         run: npm ci
-      - name: Definir alvo
+
+      - name: Determinar alvo do deploy
         id: target
         run: |
+          # Push para main → deploy completo
+          # workflow_dispatch → respeita input
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "target=${{ github.event.inputs.target }}" >> $GITHUB_OUTPUT
           else
             echo "target=all" >> $GITHUB_OUTPUT
           fi
-      - name: Deploy Functions
+
+      - name: Deploy — Cloud Functions
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'functions'
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only functions --project workrail-solenis --token "$FIREBASE_TOKEN" --non-interactive
-      - name: Deploy Firestore Rules
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: |
+          firebase deploy --only functions \
+            --project workrail-solenis \
+            --token "$FIREBASE_TOKEN" \
+            --non-interactive
+
+      - name: Deploy — Firestore Rules e Indexes
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'rules'
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only firestore --project workrail-solenis --token "$FIREBASE_TOKEN" --non-interactive
-      - name: Deploy Hosting
+        run: |
+          firebase deploy --only firestore \
+            --project workrail-solenis \
+            --token "$FIREBASE_TOKEN" \
+            --non-interactive
+
+      - name: Deploy — Firebase Hosting
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'hosting'
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-        run: firebase deploy --only hosting --project workrail-solenis --token "$FIREBASE_TOKEN" --non-interactive
-      - name: Health check
+        run: |
+          firebase deploy --only hosting \
+            --project workrail-solenis \
+            --token "$FIREBASE_TOKEN" \
+            --non-interactive
+
+      - name: Verificar saúde pós-deploy
         if: steps.target.outputs.target == 'all' || steps.target.outputs.target == 'hosting'
         run: |
+          echo "Aguardando propagação (30s)..."
           sleep 30
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://workrail-solenis.web.app/api/health)
-          [[ "$STATUS" == "200" || "$STATUS" == "503" ]] || exit 1
-          echo "Health OK: $STATUS"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://workrail-solenis.web.app/api/health)
+          echo "Status HTTP do health check: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "503" ]; then
+            echo "❌ Health check inesperado: $HTTP_STATUS"
+            exit 1
+          fi
+          echo "✅ Health check respondeu: $HTTP_STATUS"
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 3: Preview Channel (apenas em PRs)
+  # ──────────────────────────────────────────────────────────────────────────
   preview:
-    name: Preview Channel (PRs)
+    name: Deploy Preview Channel
     runs-on: ubuntu-latest
+    needs: validate
     if: github.event_name == 'pull_request'
     permissions:
       pull-requests: write
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Preview Channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WORKRAIL_SOLENIS }}
           projectId: workrail-solenis
           channelId: preview-pr-${{ github.event.pull_request.number }}
+        # PENDÊNCIA: FIREBASE_SERVICE_ACCOUNT_WORKRAIL_SOLENIS deve ser
+        # configurado nos Secrets do repositório GitHub.
+        # Veja GITHUB_SETUP.md para instruções.

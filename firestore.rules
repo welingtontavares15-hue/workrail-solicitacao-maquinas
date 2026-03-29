@@ -2,30 +2,30 @@
  * WORKRAIL v2.3 Firestore Security Rules
  *
  * Estas regras implementam:
- * - Controle de acesso baseado em papeis (6 roles via Custom Claims)
- * - Maquina de estados: 15 status formais com transicoes permitidas por role
- * - Validacao de dados no servidor (email, CPF, telefone, CNPJ)
- * - Trilha de auditoria imutavel via subcolecoes
- * - Bloqueio total de tudo que nao foi explicitamente liberado
+ * - Controle de acesso baseado em papéis (6 roles via Custom Claims)
+ * - Máquina de estados: 15 status formais com transições permitidas por role
+ * - Validação de dados no servidor (email, CPF, telefone, CNPJ)
+ * - Trilha de auditoria imutável via subcoleções
+ * - Bloqueio total de tudo que não foi explicitamente liberado
  *
- * Papeis (roles) - configurados via Custom Claims no Firebase Auth:
- *   super_admin       -> Acesso total ao sistema
- *   adm               -> Painel administrativo
- *   gestor            -> Aprovacao e gestao de workflow
- *   vendas            -> Criacao e envio de solicitacoes
- *   fornecedor_ebst   -> Fornecedor EBST
- *   fornecedor_hobart -> Fornecedor Hobart
+ * Papéis (roles) — configurados via Custom Claims no Firebase Auth:
+ *   super_admin       → Acesso total ao sistema
+ *   adm               → Painel administrativo
+ *   gestor            → Aprovação e gestão de workflow
+ *   vendas            → Criação e envio de solicitações
+ *   fornecedor_ebst   → Fornecedor EBST
+ *   fornecedor_hobart → Fornecedor Hobart
  *
  * Modelo de dados:
- *   /users/{id}                            - perfis de usuario
- *   /solicitacoes/{id}                     - solicitacoes (documento principal)
- *   /solicitacoes/{id}/movimentacoes/{id}  - trilha de auditoria (imutavel)
- *   /solicitacoes/{id}/anexos/{id}         - metadados de anexos (imutavel)
- *   /solicitacoes/{id}/notificacoes/{id}   - log de notificacoes (imutavel)
- *   /fornecedores/{id}                     - cadastro de fornecedores
- *   /auditoria/{id}                        - log de auditoria global (imutavel)
- *   /_rateLimit/{ip}                       - controle de rate limiting (escrita via Function)
- *   /_health/{id}                          - health check (escrita via Function)
+ *   /usuarios/{id}                         — perfis de usuário
+ *   /solicitacoes/{id}                     — solicitações (documento principal)
+ *   /solicitacoes/{id}/movimentacoes/{id}  — trilha de auditoria (imutável)
+ *   /solicitacoes/{id}/anexos/{id}         — metadados de anexos (imutável)
+ *   /solicitacoes/{id}/notificacoes/{id}   — log de notificações (imutável)
+ *   /fornecedores/{id}                     — cadastro de fornecedores
+ *   /auditoria/{id}                        — log de auditoria global (imutável)
+ *   /_rateLimit/{ip}                       — controle de rate limiting (escrita via Function)
+ *   /_health/{id}                          — health check (escrita via Function)
  *
  * Deploy:
  *   firebase deploy --only firestore:rules
@@ -36,20 +36,27 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ═══════════════════════════════════════════════════════════
+    // FUNÇÕES AUXILIARES
+    // ═══════════════════════════════════════════════════════════
+
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function hasRole(role) {
-      return isAuthenticated() && request.auth.token.role == role;
+      return isAuthenticated() &&
+        request.auth.token.role == role;
     }
 
     function hasAnyRole(roles) {
-      return isAuthenticated() && request.auth.token.role in roles;
+      return isAuthenticated() &&
+        request.auth.token.role in roles;
     }
 
     function isDocumentOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() &&
+        request.auth.uid == userId;
     }
 
     function isValidEmail(email) {
@@ -80,27 +87,40 @@ service cloud.firestore {
 
     function isValidStatus(status) {
       return status in [
-        'rascunho','enviada_vendas','em_analise_gestor',
-        'ajuste_solicitado_gestor','reprovada_gestor','aprovada_gestor',
-        'em_analise_adm','encaminhada_fornecedor','aguardando_nf',
-        'nf_anexada','em_acompanhamento_logistico','instalacao_programada',
-        'instalacao_em_andamento','instalacao_concluida','finalizada'
+        'rascunho',
+        'enviada_vendas',
+        'em_analise_gestor',
+        'ajuste_solicitado_gestor',
+        'reprovada_gestor',
+        'aprovada_gestor',
+        'em_analise_adm',
+        'encaminhada_fornecedor',
+        'aguardando_nf',
+        'nf_anexada',
+        'em_acompanhamento_logistico',
+        'instalacao_programada',
+        'instalacao_em_andamento',
+        'instalacao_concluida',
+        'finalizada'
       ];
     }
 
-    function isRecentTimestamp(timestamp) {
-      return timestamp != null && timestamp <= request.time;
+    function isRecentTimestamp(ts) {
+      return ts != null &&
+        ts <= request.time;
     }
 
     function isAllowedTransition(fromStatus, toStatus, role) {
       let vendas = role == 'vendas' &&
         ((fromStatus == 'rascunho' && toStatus == 'enviada_vendas') ||
          (fromStatus == 'ajuste_solicitado_gestor' && toStatus == 'enviada_vendas'));
+
       let gestor = role == 'gestor' &&
         ((fromStatus == 'enviada_vendas' && toStatus == 'em_analise_gestor') ||
          (fromStatus == 'em_analise_gestor' && toStatus == 'aprovada_gestor') ||
          (fromStatus == 'em_analise_gestor' && toStatus == 'reprovada_gestor') ||
          (fromStatus == 'em_analise_gestor' && toStatus == 'ajuste_solicitado_gestor'));
+
       let adm = role == 'adm' &&
         ((fromStatus == 'aprovada_gestor' && toStatus == 'em_analise_adm') ||
          (fromStatus == 'em_analise_adm' && toStatus == 'encaminhada_fornecedor') ||
@@ -109,64 +129,135 @@ service cloud.firestore {
          (fromStatus == 'instalacao_programada' && toStatus == 'instalacao_em_andamento') ||
          (fromStatus == 'instalacao_em_andamento' && toStatus == 'instalacao_concluida') ||
          (fromStatus == 'instalacao_concluida' && toStatus == 'finalizada'));
+
       let fornecedor = (role == 'fornecedor_ebst' || role == 'fornecedor_hobart') &&
         ((fromStatus == 'encaminhada_fornecedor' && toStatus == 'aguardando_nf') ||
          (fromStatus == 'aguardando_nf' && toStatus == 'nf_anexada'));
+
       let superAdmin = role == 'super_admin' && isValidStatus(toStatus);
+
       return vendas || gestor || adm || fornecedor || superAdmin;
     }
 
-    match /users/{userId} {
-      allow read: if isAuthenticated() && (isDocumentOwner(userId) || hasAnyRole(['super_admin', 'adm']));
+    // ═══════════════════════════════════════════════════════════
+    // USUARIOS (perfis de usuário — coleção real no banco)
+    // Nota: nome da coleção é 'usuarios' (padrão do projeto)
+    // ═══════════════════════════════════════════════════════════
+
+    match /usuarios/{userId} {
+      allow read: if isAuthenticated() &&
+        (isDocumentOwner(userId) || hasAnyRole(['super_admin', 'adm']));
+
       allow create: if hasRole('super_admin') &&
         isValidEmail(request.resource.data.email) &&
-        request.resource.data.role in ['super_admin','adm','gestor','vendas','fornecedor_ebst','fornecedor_hobart'] &&
+        request.resource.data.role in [
+          'super_admin', 'adm', 'gestor', 'vendas',
+          'fornecedor_ebst', 'fornecedor_hobart'
+        ] &&
         request.resource.data.createdAt != null;
+
       allow update: if isDocumentOwner(userId) &&
-        request.resource.data.keys().hasOnly(['name', 'phone', 'updatedAt']) &&
-        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+        request.resource.data.keys().hasOnly(['name', 'nome', 'phone', 'telefone', 'updatedAt']) &&
+        (!('phone' in request.resource.data) ||
+          isValidPhone(request.resource.data.phone)) &&
         isRecentTimestamp(request.resource.data.updatedAt);
+
       allow delete: if hasRole('super_admin');
     }
 
-    match /solicitacoes/{requestId} {
+    // ═══════════════════════════════════════════════════════════
+    // MODELOS DE MÁQUINAS (catálogo de equipamentos)
+    // ═══════════════════════════════════════════════════════════
+
+    match /modelos_maquinas/{modeloId} {
       allow read: if isAuthenticated();
-      allow create: if hasAnyRole(['vendas','gestor','adm','super_admin']) &&
+      allow create, update: if hasAnyRole(['adm', 'super_admin']);
+      allow delete: if hasRole('super_admin');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CONTADORES (controle de sequência de IDs — Admin SDK)
+    // ═══════════════════════════════════════════════════════════
+
+    match /contadores/{docId} {
+      allow read: if hasAnyRole(['adm', 'super_admin']);
+      allow write: if false; // Apenas Admin SDK
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SOLICITAÇÕES
+    // ═══════════════════════════════════════════════════════════
+
+    match /solicitacoes/{requestId} {
+      // Internos leem tudo; fornecedores leem apenas suas solicitações
+      allow read: if isAuthenticated() &&
+        (hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin']) ||
+         (hasRole('fornecedor_ebst') && resource.data.fornecedor == 'EBST') ||
+         (hasRole('fornecedor_hobart') && resource.data.fornecedor == 'Hobart Brasil') ||
+         isDocumentOwner(resource.data.createdBy));
+
+      allow create: if hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin']) &&
         isValidEmail(request.resource.data.email) &&
-        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
-        (!('cpf' in request.resource.data) || isValidCPF(request.resource.data.cpf)) &&
-        (!('cnpj' in request.resource.data) || isValidCNPJ(request.resource.data.cnpj)) &&
+        (!('phone' in request.resource.data) ||
+          isValidPhone(request.resource.data.phone)) &&
+        (!('cpf' in request.resource.data) ||
+          isValidCPF(request.resource.data.cpf)) &&
+        (!('cnpj' in request.resource.data) ||
+          isValidCNPJ(request.resource.data.cnpj)) &&
         isValidStatus(request.resource.data.statusAtual) &&
         request.resource.data.statusAtual in ['rascunho', 'enviada_vendas'] &&
         request.resource.data.createdAt != null &&
         request.resource.data.createdBy == request.auth.uid;
+
       allow update: if
         (isDocumentOwner(resource.data.createdBy) ||
-          hasAnyRole(['gestor','adm','super_admin','fornecedor_ebst','fornecedor_hobart'])) &&
-        (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
-        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
-        (!('statusAtual' in request.resource.data) || isValidStatus(request.resource.data.statusAtual)) &&
+          hasAnyRole(['gestor', 'adm', 'super_admin',
+            'fornecedor_ebst', 'fornecedor_hobart'])) &&
+        (!('email' in request.resource.data) ||
+          isValidEmail(request.resource.data.email)) &&
+        (!('phone' in request.resource.data) ||
+          isValidPhone(request.resource.data.phone)) &&
+        (!('statusAtual' in request.resource.data) ||
+          isValidStatus(request.resource.data.statusAtual)) &&
         (!('statusAtual' in request.resource.data) ||
           request.resource.data.statusAtual == resource.data.statusAtual ||
-          isAllowedTransition(resource.data.statusAtual, request.resource.data.statusAtual, request.auth.token.role)) &&
+          isAllowedTransition(
+            resource.data.statusAtual,
+            request.resource.data.statusAtual,
+            request.auth.token.role
+          )) &&
         isRecentTimestamp(request.resource.data.updatedAt);
+
       allow delete: if hasAnyRole(['adm', 'super_admin']);
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // FORNECEDORES
+    // ═══════════════════════════════════════════════════════════
+
     match /fornecedores/{supplierId} {
       allow read: if isAuthenticated();
-      allow create: if hasAnyRole(['adm','super_admin']) &&
+
+      allow create: if hasAnyRole(['adm', 'super_admin']) &&
         isValidCNPJ(request.resource.data.cnpj) &&
         isValidEmail(request.resource.data.email) &&
         isValidPhone(request.resource.data.phone) &&
-        request.resource.data.status in ['active','inactive','suspended'] &&
+        request.resource.data.status in ['active', 'inactive', 'suspended'] &&
         request.resource.data.createdAt != null;
-      allow update: if hasAnyRole(['adm','super_admin']) &&
-        (!('email' in request.resource.data) || isValidEmail(request.resource.data.email)) &&
-        (!('phone' in request.resource.data) || isValidPhone(request.resource.data.phone)) &&
+
+      allow update: if hasAnyRole(['adm', 'super_admin']) &&
+        (!('email' in request.resource.data) ||
+          isValidEmail(request.resource.data.email)) &&
+        (!('phone' in request.resource.data) ||
+          isValidPhone(request.resource.data.phone)) &&
         isRecentTimestamp(request.resource.data.updatedAt);
+
       allow delete: if hasAnyRole(['adm', 'super_admin']);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // AUDITORIA (imutável)
+    // ═══════════════════════════════════════════════════════════
 
     match /auditoria/{auditId} {
       allow read: if hasAnyRole(['adm', 'super_admin']);
@@ -177,10 +268,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // SUBCOLEÇÕES DE SOLICITAÇÕES
+    // ═══════════════════════════════════════════════════════════
+
     match /solicitacoes/{requestId}/movimentacoes/{movId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
-        hasAnyRole(['vendas','gestor','adm','super_admin','fornecedor_ebst','fornecedor_hobart']) &&
+        hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin',
+          'fornecedor_ebst', 'fornecedor_hobart']) &&
         request.resource.data.actorUid == request.auth.uid &&
         request.resource.data.at != null &&
         request.resource.data.fromStatus != null &&
@@ -193,7 +289,8 @@ service cloud.firestore {
     match /solicitacoes/{requestId}/anexos/{anexoId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() &&
-        hasAnyRole(['vendas','gestor','adm','super_admin','fornecedor_ebst','fornecedor_hobart']) &&
+        hasAnyRole(['vendas', 'gestor', 'adm', 'super_admin',
+          'fornecedor_ebst', 'fornecedor_hobart']) &&
         request.resource.data.uploadedBy == request.auth.uid &&
         request.resource.data.tipo != null &&
         request.resource.data.storagePath != null &&
@@ -209,13 +306,21 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // COLEÇÕES INTERNAS (Cloud Functions only via Admin SDK)
+    // ═══════════════════════════════════════════════════════════
+
     match /_rateLimit/{docId} {
-      allow read, write: if false;
+      allow read, write: if false; // Apenas Admin SDK
     }
 
     match /_health/{docId} {
-      allow read, write: if false;
+      allow read, write: if false; // Apenas Admin SDK
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // BLOQUEIO PADRÃO
+    // ═══════════════════════════════════════════════════════════
 
     match /{document=**} {
       allow read, write: if false;
