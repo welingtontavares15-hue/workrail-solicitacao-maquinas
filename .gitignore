@@ -44,7 +44,7 @@ desktop.ini
 *.swo
 *~
 
-# ─── Artefatos temporários ───────────────────────────────────────────────────
+# ─── Artefatos temporários ──────────────────────────────────────────────────
 *.bak
 *.tmp
 *.log
@@ -69,3 +69,6 @@ mudancas*
 analise*
 admin_firebase*
 criar_usuarios*
+workrail-solenis-*.json
+_test_upload.json
+reader.html
