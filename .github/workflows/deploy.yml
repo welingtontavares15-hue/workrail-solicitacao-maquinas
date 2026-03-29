@@ -26,9 +26,9 @@ permissions:
   id-token: write   # Para autenticação via Workload Identity (opcional)
 
 jobs:
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────[...]
   # JOB 1: Validação
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────[...]
   validate:
     name: Validação do repositório
     runs-on: ubuntu-latest
@@ -43,6 +43,9 @@ jobs:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: functions/package-lock.json
+
+      - name: Fixar versão do npm
+        run: npm install -g npm@10
 
       - name: Instalar dependências das Cloud Functions
         working-directory: functions
@@ -94,9 +97,9 @@ jobs:
             console.log('✅ firebase.json válido');
           "
 
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────[...]
   # JOB 2: Deploy (só roda após validação)
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────[...]
   deploy:
     name: Deploy Firebase
     runs-on: ubuntu-latest
@@ -113,6 +116,9 @@ jobs:
           node-version: "18"
           cache: "npm"
           cache-dependency-path: functions/package-lock.json
+
+      - name: Fixar versão do npm
+        run: npm install -g npm@10
 
       - name: Instalar Firebase CLI
         run: npm install -g firebase-tools
@@ -179,9 +185,9 @@ jobs:
           fi
           echo "✅ Health check respondeu: $HTTP_STATUS"
 
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────[...]
   # JOB 3: Preview Channel (apenas em PRs)
-  # ──────────────────────────────────────────────────────────────────────────
+  # ────────────────────────────────────────────────────────────────[...]
   preview:
     name: Deploy Preview Channel
     runs-on: ubuntu-latest
