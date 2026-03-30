@@ -726,6 +726,8 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" crossorigin="anonymous"></script>
+<!-- Bcryptjs para hash de senha (evita dependência de Firebase Auth) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js" crossorigin="anonymous"></script>
 <style>
 /* ══ LOGIN OVERLAY ══ */
 #login-overlay{
@@ -886,10 +888,10 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
     </div>
     <div class="login-body">
       <div class="login-title">Acesso ao Sistema</div>
-      <div class="login-sub">Use seu e-mail e senha cadastrados pelo administrador.</div>
+      <div class="login-sub">Use seu email e senha cadastrados pelo administrador.</div>
       <div class="login-field">
-        <label>E-mail</label>
-        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="username">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="seu.email@example.com" autocomplete="email">
       </div>
       <div class="login-field">
         <label>Senha</label>
@@ -920,17 +922,17 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
       <button onclick="fecharRecuperarSenha()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;line-height:1">&times;</button>
     </div>
     <div style="padding:22px 24px">
-      <p style="font-size:13px;color:#546e7a;margin-bottom:16px">Informe seu e-mail cadastrado. Enviaremos um link para redefinir sua senha.</p>
+      <p style="font-size:13px;color:#546e7a;margin-bottom:16px">Informe seu email para verificar sua conta. O administrador poderá resetar sua senha.</p>
       <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:600;color:#455a64;display:block;margin-bottom:6px">E-mail</label>
-        <input type="email" id="recSenhaEmail" placeholder="seu@email.com" autocomplete="email"
+        <label style="font-size:12px;font-weight:600;color:#455a64;display:block;margin-bottom:6px">Email</label>
+        <input type="email" id="recSenhaEmail" placeholder="seu.email@example.com" autocomplete="email"
           style="width:100%;padding:9px 12px;border:1px solid #cfd8dc;border-radius:5px;font-size:13.5px;font-family:inherit;outline:none;transition:border-color .15s"
           onkeydown="if(event.key==='Enter')enviarRecuperacao()">
       </div>
       <div id="recSenhaMsg" style="font-size:12.5px;margin-bottom:12px;min-height:18px"></div>
       <button onclick="enviarRecuperacao()" id="recSenhaBtn"
         style="width:100%;padding:10px;background:#0e7b82;color:#fff;border:none;border-radius:6px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;transition:background .15s">
-        Enviar Link
+        Solicitar Reset
       </button>
     </div>
   </div>
@@ -1011,7 +1013,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
       </div>
       <div class="sb-item" onclick="openPendentes()" id="sb-pendentes">
         <svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M5 7.5l2 2 3-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Pendentes Aprovação
+        Pendentes Supervisor
         <div class="sb-badge amber">3</div>
       </div>
       <div class="sb-item" style="opacity:.45;cursor:default">
@@ -1403,7 +1405,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 12px 12px">
                 <div class="perfil-card"><span class="chip c-admin" style="font-size:10px;align-self:flex-start">Administrador</span><div class="perfil-desc">Acesso total. Gerencia usuários, fornecedores, modelos e configurações do sistema.</div></div>
                 <div class="perfil-card"><span class="chip c-pending" style="font-size:10px;align-self:flex-start">Vendas</span><div class="perfil-desc">Abre e envia solicitações. Acompanha o andamento do fluxo.</div></div>
-                <div class="perfil-card"><span class="chip c-analysis" style="font-size:10px;align-self:flex-start">Gestor</span><div class="perfil-desc">Aprova, reprova ou solicita ajuste. Anexa checklist de instalação.</div></div>
+                <div class="perfil-card"><span class="chip c-analysis" style="font-size:10px;align-self:flex-start">Supervisor AS&TS</span><div class="perfil-desc">Aprova, reprova ou solicita ajuste. Anexa checklist de instalação.</div></div>
                 <div class="perfil-card"><span class="chip c-approved" style="font-size:10px;align-self:flex-start">ADM Vendas</span><div class="perfil-desc">Confere documentação, aciona o fornecedor e acompanha a instalação.</div></div>
                 <div class="perfil-card"><span class="chip c-supplier" style="font-size:10px;align-self:flex-start">Fornecedor EBST</span><div class="perfil-desc">Vê somente pedidos EBST. Prepara máquina e anexa Nota Fiscal.</div></div>
                 <div class="perfil-card"><span class="chip c-supplier" style="font-size:10px;align-self:flex-start">Fornecedor Hobart</span><div class="perfil-desc">Vê somente pedidos Hobart Brasil. Prepara máquina e anexa Nota Fiscal.</div></div>
@@ -1464,11 +1466,25 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
                 <!-- ── Linha 2: Equipamento ───────────────────────── -->
                 <div class="field">
                   <label>Modelo da Máquina <span class="req">*</span></label>
-                  <select>
+                  <select id="modeloMaquinaSelect">
                     <option value="">Selecionar modelo...</option>
-                    <option>Hobart AM15</option><option>Hobart AMXT</option>
-                    <option>Hobart FX</option><option>Hobart CLPS50</option>
-                    <option>Jackson CREW</option><option>Fagor AD-48C</option>
+                    <optgroup label="Hobart">
+                      <option>Ecomax 403</option>
+                      <option>Ecomax 503</option>
+                      <option>Ecomax 603</option>
+                      <option>CCR 200 C NR-12</option>
+                      <option>CCR 200 S NR-12</option>
+                      <option>CCR 260 C NR-12</option>
+                      <option>CCR 260 S NR-12</option>
+                    </optgroup>
+                    <optgroup label="EBST">
+                      <option>HD-50 Remanufaturada</option>
+                      <option>HD-80 Remanufaturada</option>
+                      <option>HD-50 Nova</option>
+                      <option>HD-80 Nova</option>
+                      <option>HD-200</option>
+                      <option>HD-200 MOB</option>
+                    </optgroup>
                   </select>
                 </div>
                 <div class="field">
@@ -1525,47 +1541,52 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
               <button class="btn btn-back" onclick="goPage('home')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button>
               <button class="btn btn-clear"><svg viewBox="0 0 13 13" fill="none"><path d="M2 2l9 9M11 2L2 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>Limpar</button>
             </div>
-            <div class="ab-right"><button class="btn btn-send" onclick="showMod('mEnviar')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Enviar para Gestor</button></div>
+            <div class="ab-right"><button class="btn btn-send" onclick="showMod('mEnviar')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Enviar para Supervisor</button></div>
           </div>
         </div>
       </div>
 
-      <!-- 02 GESTOR -->
+      <!-- 02 SUPERVISOR AS&TS -->
       <div class="screen" id="screen-gestor">
         <div class="form-screen">
           <div class="form-hdr">
             <div class="fh-icon"><svg viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="8.5" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8.5l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-            <div><div class="fh-title">02 — Avaliação do Gestor</div><div class="fh-sub">Gestor de Vendas · Aprovação ou rejeição</div></div>
-            <div class="fh-status"><div class="chip c-analysis"><div class="chip-dot"></div>Em Análise</div></div>
+            <div><div class="fh-title">02 — Aprovação do Supervisor AS&amp;TS</div><div class="fh-sub">Supervisor AS&amp;TS · aprovação técnica ou rejeição</div></div>
+            <div class="fh-status"><div class="chip c-analysis"><div class="chip-dot"></div>Em Análise Técnica</div></div>
           </div>
           <div class="form-body">
-            <div class="alert a-info"><svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7v3.5M7.5 5.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span>Revise os dados e registre seu parecer. A aprovação encaminha automaticamente ao ADM de Vendas.</span></div>
+            <div class="alert a-info"><svg viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7.5 7v3.5M7.5 5.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span>Revise contrato e dados da operação. Nesta etapa o Supervisor AS&amp;TS aprova, rejeita ou solicita ajuste e registra a especificação técnica da máquina.</span></div>
             <div class="fcard">
               <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="4" r="2.5" stroke="currentColor" stroke-width="1.1"/><path d="M1 12c0-3.04 2.46-5.5 5.5-5.5S12 8.96 12 12" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="fc-title">Dados Recebidos</span></div>
               <div class="fc-body">
                 <div class="info-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
                   <div class="ir-item"><div class="il">Ship To</div><div class="iv">BZ-001482</div></div>
                   <div class="ir-item"><div class="il">Cliente</div><div class="iv">Rest. Sabor Mineiro</div></div>
-                  <div class="ir-item"><div class="il">Modelo</div><div class="iv">Hobart AM15</div></div>
+                  <div class="ir-item"><div class="il">Contrato</div><div class="iv">Anexado por Vendas</div></div>
                   <div class="ir-item"><div class="il">Solicitado em</div><div class="iv">12/06/2025</div></div>
-                  <div class="ir-item"><div class="il">Refeições/Dia</div><div class="iv">320</div></div>
-                  <div class="ir-item"><div class="il">Refeições/Hora</div><div class="iv">45</div></div>
-                  <div class="ir-item"><div class="il">Mesa?</div><div class="iv">Sim</div></div>
-                  <div class="ir-item"><div class="il">Representante</div><div class="iv">W. Bastos</div></div>
                 </div>
               </div>
             </div>
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="fc-title">Parecer do Gestor</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3.5 5h6M3.5 7h6M3.5 9h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Especificação Técnica da Máquina</span></div>
+              <div class="fc-body c2">
+                <div class="field"><label>Fornecedor Recomendado <span class="req">*</span></label><select id="supervisorFornecedor"><option value="">Selecionar...</option><option>Hobart Brasil</option><option>EBST</option></select></div>
+                <div class="field"><label>Modelo Validado <span class="req">*</span></label><input type="text" id="supervisorModeloValidado" placeholder="Ex: Ecomax 503"></div>
+                <div class="field"><label>Voltagem / Configuração</label><input type="text" id="supervisorVoltagem" placeholder="Ex: 220V / 380V / trifásico"></div>
+                <div class="field"><label>Capacidade / Observação Técnica</label><input type="text" id="supervisorCapacidade" placeholder="Ex: 60 racks/h · bancada lado direito"></div>
+              </div>
+            </div>
+            <div class="fcard">
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="fc-title">Decisão do Supervisor</span></div>
               <div class="fc-body c2">
                 <div class="decision-card dc-approve">
                   <h4>✓ Aprovação</h4>
-                  <p>Modelo e condições adequados ao perfil do cliente. Encaminha ao ADM de Vendas.</p>
+                  <p>Valida o contrato, o modelo e o fornecedor sugerido. A solicitação segue para aprovação do ADM de Vendas.</p>
                   <button class="btn btn-approve" onclick="showMod('mAprovar')" style="align-self:flex-start;height:32px;font-size:12px"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Aprovar</button>
                 </div>
                 <div class="decision-card dc-reject">
                   <h4>✗ Rejeição / Ajuste</h4>
-                  <p>Solicitação não atende critérios. Retorna ao Representante com justificativa ou solicita ajuste específico.</p>
+                  <p>Retorna para Vendas quando faltarem dados do contrato, o dimensionamento estiver incorreto ou a máquina não for aderente.</p>
                   <div style="display:flex;gap:6px;flex-wrap:wrap">
                     <button class="btn btn-reject" onclick="showMod('mRejeitar')" style="align-self:flex-start;height:32px;font-size:12px"><svg viewBox="0 0 13 13" fill="none"><path d="M2 2l9 9M11 2L2 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Rejeitar</button>
                     <button class="btn btn-clear" onclick="showMod('mAjuste')" style="align-self:flex-start;height:32px;font-size:12px"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M9 4l2.5 2.5L9 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Solicitar Ajuste</button>
@@ -1574,24 +1595,23 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
               </div>
             </div>
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3.5 5h6M3.5 7h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Justificativa</span></div>
-              <div class="fc-body c1"><div class="field"><label>Observações do Gestor <span class="req">*</span></label><textarea placeholder="Descreva o motivo da aprovação ou rejeição. Campo obrigatório para rejeições."></textarea></div></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3.5 5h6M3.5 7h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Parecer</span></div>
+              <div class="fc-body c1"><div class="field"><label>Observações do Supervisor AS&amp;TS <span class="req">*</span></label><textarea placeholder="Descreva a justificativa da aprovação, rejeição ou orientação de ajuste."></textarea></div></div>
             </div>
           </div>
           <div class="action-bar"><div class="ab-left"><button class="btn btn-back" onclick="go('solicitacao')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div></div>
         </div>
       </div>
-
       <!-- 03 ADM -->
       <div class="screen" id="screen-adm">
         <div class="form-screen">
           <div class="form-hdr">
             <div class="fh-icon"><svg viewBox="0 0 17 17" fill="none"><path d="M3 3h11v11H3z" stroke="currentColor" stroke-width="1.3"/><path d="M6 3V2M11 3V2M3 7h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
-            <div><div class="fh-title">03 — Conferência ADM</div><div class="fh-sub">ADM de Vendas · Revisão e acionamento do fornecedor</div></div>
-            <div class="fh-status"><div class="chip c-approved"><div class="chip-dot"></div>Aprovado pelo Gestor</div></div>
+            <div><div class="fh-title">03 — Aprovação do ADM de Vendas</div><div class="fh-sub">ADM de Vendas · aprovação final e encaminhamento ao fornecedor</div></div>
+            <div class="fh-status"><div class="chip c-approved"><div class="chip-dot"></div>Aprovado pelo Supervisor AS&TS</div></div>
           </div>
           <div class="form-body">
-            <div class="alert a-ok"><svg viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Aprovado. Revise o contrato e emita o pedido ao fornecedor.</span></div>
+            <div class="alert a-ok"><svg viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Aprovado tecnicamente. Faça a validação administrativa e encaminhe a solicitação ao fornecedor correto.</span></div>
             <div class="fcard">
               <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M8 1v3h3M4.5 7h4M4.5 9h4M4.5 11h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Contrato e Documentação</span></div>
               <div class="fc-body c2">
@@ -1601,7 +1621,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
               </div>
             </div>
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1.5" y="4.5" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 6.5h2l1.5 2.5v3h-3.5v-5.5z" stroke="currentColor" stroke-width="1.1"/><circle cx="4" cy="12" r="1" stroke="currentColor" stroke-width="1"/><circle cx="11" cy="12" r="1" stroke="currentColor" stroke-width="1"/></svg><span class="fc-title">Pedido ao Fornecedor</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1.5" y="4.5" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 6.5h2l1.5 2.5v3h-3.5v-5.5z" stroke="currentColor" stroke-width="1.1"/><circle cx="4" cy="12" r="1" stroke="currentColor" stroke-width="1"/><circle cx="11" cy="12" r="1" stroke="currentColor" stroke-width="1"/></svg><span class="fc-title">Encaminhamento ao Fornecedor</span></div>
               <div class="fc-body c3">
                 <div class="field"><label>Fornecedor <span class="req">*</span></label><select id="selectFornecedorAdm"><option value="">Selecionar...</option><option>Hobart Brasil</option><option>EBST</option></select></div>
                 <div class="field"><label>Nº do Pedido</label><input type="text" id="campoPedidoNum" readonly placeholder="WR-2026-XXXX" style="background:#f4f6f8;color:var(--text-mid);cursor:default"></div>
@@ -1611,7 +1631,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
           </div>
           <div class="action-bar">
             <div class="ab-left"><button class="btn btn-back" onclick="go('gestor')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div>
-            <div class="ab-right"><button class="btn btn-supplier" onclick="showMod('mFornecedor')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Acionar Fornecedor</button></div>
+            <div class="ab-right"><button class="btn btn-supplier" onclick="showMod('mFornecedor')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Aprovar e Encaminhar</button></div>
           </div>
         </div>
       </div>
@@ -1621,23 +1641,23 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <div class="form-screen">
           <div class="form-hdr">
             <div class="fh-icon"><svg viewBox="0 0 17 17" fill="none"><rect x="1.5" y="5" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M11.5 7h2.5l1.5 3v3h-4V7z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="4.5" cy="13.5" r="1.2" stroke="currentColor" stroke-width="1.1"/><circle cx="13" cy="13.5" r="1.2" stroke="currentColor" stroke-width="1.1"/></svg></div>
-            <div><div class="fh-title">04 — Preparação para Coleta</div><div class="fh-sub">Fornecedor · NF e data prevista de coleta</div></div>
+            <div><div class="fh-title">04 — Preparação da Máquina pelo Fornecedor</div><div class="fh-sub">Fornecedor · anexo da NF e data de liberação da máquina</div></div>
             <div class="fh-status"><div class="chip c-supplier"><div class="chip-dot"></div>Em Preparação</div></div>
           </div>
           <div class="form-body">
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.1"/><path d="M8 1v3h3M4.5 7h4M4.5 9h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Documentação Fiscal</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.1"/><path d="M8 1v3h3M4.5 7h4M4.5 9h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Nota Fiscal e Liberação</span></div>
               <div class="fc-body c2">
                 <div class="field s2"><label>Nota Fiscal <span class="req">*</span></label><label class="file-drop" id="fNF"><input type="file" onchange="setFile(this,'fNF','fNFA')"><svg viewBox="0 0 18 18" fill="none"><path d="M9 4v8M5 8l4-4 4 4M3 14h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Anexar NF (obrigatória)</span></label><div class="file-attached" id="fNFA"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1"/><path d="M8 1v3h3" stroke="currentColor" stroke-width="1"/></svg><span></span></div></div>
                 <div class="field"><label>Número da NF <span class="req">*</span></label><input type="text" placeholder="000.000.000"></div>
-                <div class="field"><label>Data da Coleta <span class="req">*</span></label><input type="date" id="dataColeta"></div>
-                <div class="field s2"><label>Observações</label><input type="text" placeholder="Informações adicionais sobre a coleta..."></div>
+                <div class="field"><label>Data de Liberação da Máquina <span class="req">*</span></label><input type="date" id="dataColeta"></div>
+                <div class="field s2"><label>Observações</label><input type="text" placeholder="Informações adicionais sobre liberação e disponibilidade..."></div>
               </div>
             </div>
           </div>
           <div class="action-bar">
             <div class="ab-left"><button class="btn btn-back" onclick="go('adm')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div>
-            <div class="ab-right"><button class="btn btn-advance" onclick="showMod('mExpedir')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Confirmar Expedição</button></div>
+            <div class="ab-right"><button class="btn btn-advance" onclick="showMod('mExpedir')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Informar NF e Liberação</button></div>
           </div>
         </div>
       </div>
@@ -1647,40 +1667,40 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <div class="form-screen">
           <div class="form-hdr">
             <div class="fh-icon"><svg viewBox="0 0 17 17" fill="none"><path d="M8.5 2v5.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8.5" cy="8.5" r="6" stroke="currentColor" stroke-width="1.3"/></svg></div>
-            <div><div class="fh-title">05 — Liberação / Coleta</div><div class="fh-sub">ADM + Gestor · Confirmação da disponibilidade para instalação</div></div>
+            <div><div class="fh-title">05 — Logística de Coleta e Entrega</div><div class="fh-sub">ADM de Vendas · acionar logística para coleta e entrega</div></div>
             <div class="fh-status"><div class="chip c-transit"><div class="chip-dot"></div>Em Trânsito</div></div>
           </div>
           <div class="form-body">
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1.5" y="4.5" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 6.5h2l1.5 2.5v3h-3.5v-5.5z" stroke="currentColor" stroke-width="1.1"/></svg><span class="fc-title">Status da Expedição</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><rect x="1.5" y="4.5" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M9.5 6.5h2l1.5 2.5v3h-3.5v-5.5z" stroke="currentColor" stroke-width="1.1"/></svg><span class="fc-title">Dados Recebidos do Fornecedor</span></div>
               <div class="fc-body">
                 <div class="info-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
                   <div class="ir-item"><div class="il">Fornecedor</div><div class="iv" id="info-fornecedor-05">—</div></div>
                   <div class="ir-item"><div class="il">Número NF</div><div class="iv" id="info-nf-05">—</div></div>
-                  <div class="ir-item"><div class="il">Data da Coleta</div><div class="iv" id="info-coleta-05">—</div></div>
+                  <div class="ir-item"><div class="il">Data de Liberação</div><div class="iv" id="info-coleta-05">—</div></div>
                   <div class="ir-item"><div class="il">Nº Pedido</div><div class="iv" id="info-pedido-05">—</div></div>
                 </div>
                 <div class="timeline">
                   <div class="tl-row"><div class="tl-dot" style="background:#2e7d32">✓</div><div class="tl-body"><div class="tl-label">Pedido emitido ao fornecedor</div><div class="tl-time">12/06/2025 09:14</div></div></div>
                   <div class="tl-row"><div class="tl-dot" style="background:#2e7d32">✓</div><div class="tl-body"><div class="tl-label">Máquina expedida</div><div class="tl-time">15/06/2025 14:30</div></div></div>
-                  <div class="tl-row"><div class="tl-dot" style="background:#0e7b82">→</div><div class="tl-body"><div class="tl-label">Em trânsito</div><div class="tl-meta">Aguardando confirmação de entrega</div></div></div>
+                  <div class="tl-row"><div class="tl-dot" style="background:#0e7b82">→</div><div class="tl-body"><div class="tl-label">Em coleta / entrega</div><div class="tl-meta">ADM deve acionar a logística para coleta e entrega ao cliente</div></div></div>
                   <div class="tl-row"><div class="tl-dot" style="background:#cfd8dc">4</div><div class="tl-body"><div class="tl-label" style="color:var(--text-muted)">Instalação (pendente)</div></div></div>
                 </div>
               </div>
             </div>
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fc-title">Confirmação para Instalação</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fc-title">Acionamento da Logística</span></div>
               <div class="fc-body c2">
-                <div class="field"><label>Data da Coleta Confirmada <span class="req">*</span></label><input type="date" id="dataColetaConfirmada"></div>
-                <div class="field"><label>Responsável pela Coleta</label><input type="text" placeholder="Nome do responsável"></div>
-                <div class="field"><label>Supervisor Notificado?</label><div class="toggle-field"><label class="toggle"><input type="checkbox" id="tSupv" onchange="updateTL('tSupv','lSupv')"><span class="toggle-slider"></span></label><span class="toggle-lbl" id="lSupv">Não</span></div></div>
-                <div class="field"><label>Observações</label><input type="text" placeholder="Informações sobre a coleta e liberação"></div>
+                <div class="field"><label>Data de Liberação Confirmada <span class="req">*</span></label><input type="date" id="dataColetaConfirmada"></div>
+                <div class="field"><label>Responsável / Transportadora</label><input type="text" placeholder="Nome do responsável"></div>
+                <div class="field"><label>Supervisor AS&TS notificado?</label><div class="toggle-field"><label class="toggle"><input type="checkbox" id="tSupv" onchange="updateTL('tSupv','lSupv')"><span class="toggle-slider"></span></label><span class="toggle-lbl" id="lSupv">Não</span></div></div>
+                <div class="field"><label>Observações</label><input type="text" placeholder="Informações sobre coleta e entrega"></div>
               </div>
             </div>
           </div>
           <div class="action-bar">
             <div class="ab-left"><button class="btn btn-back" onclick="go('fornecedor')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div>
-            <div class="ab-right"><button class="btn btn-advance" onclick="showMod('mInstalacao')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Agendar Instalação</button></div>
+            <div class="ab-right"><button class="btn btn-advance" onclick="showMod('mInstalacao')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Notificar Logística</button></div>
           </div>
         </div>
       </div>
@@ -1690,26 +1710,26 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <div class="form-screen">
           <div class="form-hdr">
             <div class="fh-icon"><svg viewBox="0 0 17 17" fill="none"><path d="M10.5 2.5L14.5 6.5M10.5 2.5L8 5l4 4 2.5-2.5M8 5L3 10l-.5 3.5L6 13l5-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-            <div><div class="fh-title">06 — Agendamento da Instalação</div><div class="fh-sub">ADM + Supervisor Técnico · Agendamento da execução</div></div>
-            <div class="fh-status"><div class="chip c-install"><div class="chip-dot"></div>Instalação Agendada</div></div>
+            <div><div class="fh-title">06 — Data de Instalação</div><div class="fh-sub">Supervisor AS&TS · informar a data de instalação</div></div>
+            <div class="fh-status"><div class="chip c-install"><div class="chip-dot"></div>Registrar Data de Instalação</div></div>
           </div>
           <div class="form-body">
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 3.5v3l2 2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="fc-title">Agendamento</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.1"/><path d="M6.5 3.5v3l2 2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="fc-title">Programação da Instalação</span></div>
               <div class="fc-body c3">
                 <div class="field"><label>Data <span class="req">*</span></label><input type="date"></div>
                 <div class="field"><label>Horário <span class="req">*</span></label><input type="time"></div>
-                <div class="field"><label>Técnico <span class="req">*</span></label><select><option value="">Selecionar...</option><option>João P. Ferreira</option><option>Carlos A. Lima</option><option>Marcos R. Santos</option></select></div>
+                <div class="field"><label>Responsável da Instalação <span class="req">*</span></label><select><option value="">Selecionar...</option><option>João P. Ferreira</option><option>Carlos A. Lima</option><option>Marcos R. Santos</option></select></div>
               </div>
             </div>
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fc-title">Checklist de Instalação</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fc-title">Checklist da Instalação (opcional)</span></div>
               <div class="fc-body c1" style="gap:6px" id="clWrap"></div>
             </div>
           </div>
           <div class="action-bar">
             <div class="ab-left"><button class="btn btn-back" onclick="go('logistica')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div>
-            <div class="ab-right"><button class="btn btn-advance" onclick="showMod('mRelatorio')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Instalação Agendada</button></div>
+            <div class="ab-right"><button class="btn btn-advance" onclick="showMod('mRelatorio')"><svg viewBox="0 0 13 13" fill="none"><path d="M11 6.5H2M7.5 3l3.5 3.5L7.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Registrar Data de Instalação</button></div>
           </div>
         </div>
       </div>
@@ -1719,22 +1739,22 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <div class="form-screen">
           <div class="form-hdr">
             <div class="fh-icon"><svg viewBox="0 0 17 17" fill="none"><path d="M3 9l4 4 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.5" cy="8.5" r="6.2" stroke="currentColor" stroke-width="1.3"/></svg></div>
-            <div><div class="fh-title">07 — Anexar Relatório</div><div class="fh-sub">ADM / Supervisor · Upload do relatório gerado no sistema externo</div></div>
+            <div><div class="fh-title">07 — Relatório e Encerramento</div><div class="fh-sub">Supervisor AS&TS · anexo do relatório e encerramento da solicitação</div></div>
             <div class="fh-status"><div class="chip c-done"><div class="chip-dot"></div>Concluído</div></div>
           </div>
           <div class="form-body">
             <div class="alert a-ok"><svg viewBox="0 0 15 15" fill="none"><path d="M2.5 7.5l3.5 3.5L12.5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Instalação agendada. Anexe o relatório gerado no sistema externo para encerrar o processo.</span></div>
             <div class="fcard">
-              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M8 1v3h3M4.5 7h4M4.5 9h4M4.5 11h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Relatório Final</span></div>
+              <div class="fc-head"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M8 1v3h3M4.5 7h4M4.5 9h4M4.5 11h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="fc-title">Relatório de Instalação</span></div>
               <div class="fc-body c2">
                 <div class="field s2"><label>Relatório de Instalação <span class="req">*</span></label><label class="file-drop" id="fRel"><input type="file" onchange="setFile(this,'fRel','fRelA')"><svg viewBox="0 0 18 18" fill="none"><path d="M9 4v8M5 8l4-4 4 4M3 14h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Anexar relatório (PDF ou imagem)</span></label><div class="file-attached" id="fRelA"><svg viewBox="0 0 13 13" fill="none"><path d="M3 1h5l3 3v8H3V1z" stroke="currentColor" stroke-width="1"/><path d="M8 1v3h3" stroke="currentColor" stroke-width="1"/></svg><span></span></div></div>
-                <div class="field s2"><label>Observações finais</label><textarea placeholder="Observações adicionais sobre a instalação (opcional)..."></textarea></div>
+                <div class="field s2"><label>Observações de Encerramento</label><textarea placeholder="Observações adicionais sobre a instalação (opcional)..."></textarea></div>
               </div>
             </div>
           </div>
           <div class="action-bar">
             <div class="ab-left"><button class="btn btn-back" onclick="go('instalacao')"><svg viewBox="0 0 13 13" fill="none"><path d="M8 2L4 6.5 8 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Voltar</button></div>
-            <div class="ab-right"><button class="btn btn-conclude" onclick="showMod('mConcluir')"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Concluir e Encerrar</button></div>
+            <div class="ab-right"><button class="btn btn-conclude" onclick="showMod('mConcluir')"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Finalizar Solicitação</button></div>
           </div>
         </div>
       </div>
@@ -1756,7 +1776,12 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <input type="text" id="admin-u-nome" class="field-input" placeholder="Ex: João da Silva">
       </div>
       <div class="login-field" style="margin:0">
-        <label style="font-size:12px;font-weight:600;color:var(--text-mid)">E-mail *</label>
+        <label style="font-size:12px;font-weight:600;color:var(--text-mid)">Usuário (username) *</label>
+        <input type="text" id="admin-u-username" class="field-input" placeholder="Ex: joao.silva" style="font-family:'DM Mono',monospace;font-size:12px">
+        <span style="font-size:10px;color:var(--text-muted);margin-top:2px;display:block">Use minúsculas, números e pontos (ex: welington.tavares)</span>
+      </div>
+      <div class="login-field" style="margin:0">
+        <label style="font-size:12px;font-weight:600;color:var(--text-mid)">E-mail (para notificações) *</label>
         <input type="email" id="admin-u-email" class="field-input" placeholder="email@empresa.com">
       </div>
       <div class="login-field" style="margin:0" id="admin-u-senha-wrap">
@@ -1767,7 +1792,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         <label style="font-size:12px;font-weight:600;color:var(--text-mid)">Perfil *</label>
         <select id="admin-u-perfil" class="field-input" onchange="adminToggleFornecedor()">
           <option value="vendas">Vendas</option>
-          <option value="gestor">Gestor</option>
+          <option value="gestor">Supervisor AS&TS</option>
           <option value="adm">ADM Vendas</option>
           <option value="fornecedor_ebst">Fornecedor EBST</option>
           <option value="fornecedor_hobart">Fornecedor Hobart Brasil</option>
@@ -1782,7 +1807,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
         </select>
       </div>
       <div class="login-field" style="margin:0" id="admin-u-reset-wrap" style="display:none">
-        <button class="btn btn-clear" style="width:100%" onclick="resetarSenhaUsuario()">🔑 Enviar link de reset de senha por e-mail</button>
+        <button class="btn btn-clear" style="width:100%" onclick="resetarSenhaUsuario()">🔑 Gerar nova senha temporária</button>
       </div>
       <div id="admin-u-erro" style="font-size:12px;color:var(--red);display:none"></div>
     </div>
@@ -1867,17 +1892,17 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:#e2e8ef;color:
 </div>
 
 <!-- ══ MODALS ══ -->
-<div id="mEnviar" class="modal-overlay"><div class="modal m-advance"><h3>Enviar para o Gestor?</h3><p>A solicitação será encaminhada ao Gestor de Vendas para análise e os documentos serão salvos no Firebase.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mEnviar')">Cancelar</button><button class="btn btn-send" onclick="confirmEnviarGestor()">Confirmar</button></div></div></div>
+<div id="mEnviar" class="modal-overlay"><div class="modal m-advance"><h3>Enviar para o Supervisor AS&TS?</h3><p>A solicitação será encaminhada ao Supervisor AS&TS para análise e os documentos serão salvos no Firebase.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mEnviar')">Cancelar</button><button class="btn btn-send" onclick="confirmEnviarGestor()">Confirmar</button></div></div></div>
 <div id="mAprovar" class="modal-overlay"><div class="modal m-approve"><h3>Aprovar Solicitação?</h3><p>Será encaminhada ao ADM de Vendas para revisão contratual. Aprovação registrada no histórico.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mAprovar')">Cancelar</button><button class="btn btn-approve" onclick="confirmAprovar()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Aprovar</button></div></div></div>
 <div id="mRejeitar" class="modal-overlay"><div class="modal m-reject"><h3>Rejeitar Solicitação?</h3><p>Retorna ao Representante com a justificativa registrada. A justificativa é obrigatória.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mRejeitar')">Cancelar</button><button class="btn btn-reject" onclick="confirmRejeitar()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 2l9 9M11 2L2 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Rejeitar</button></div></div></div>
-<div id="mAjuste" class="modal-overlay"><div class="modal m-reject"><h3>Solicitar Ajuste?</h3><p>A solicitação retornará a Vendas para revisão com as orientações do Gestor registradas.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mAjuste')">Cancelar</button><button class="btn btn-clear" onclick="confirmSolicitarAjuste()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M9 4l2.5 2.5L9 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Solicitar Ajuste</button></div></div></div>
-<div id="mFornecedor" class="modal-overlay"><div class="modal m-advance"><h3>Acionar Fornecedor?</h3><p>O pedido será enviado formalmente via e-mail e registrado no Firebase. O Nº do Pedido será gerado automaticamente.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mFornecedor')">Cancelar</button><button class="btn btn-supplier" onclick="confirmFornecedor()">Acionar</button></div></div></div>
-<div id="mExpedir" class="modal-overlay"><div class="modal m-advance"><h3>Confirmar Expedição?</h3><p>A máquina será marcada como expedida. NF e romaneio devem estar anexados e serão armazenados no Firebase.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mExpedir')">Cancelar</button><button class="btn btn-advance" onclick="confirmExpedicao()">Confirmar</button></div></div></div>
-<div id="mInstalacao" class="modal-overlay"><div class="modal m-advance"><h3>Agendar Instalação?</h3><p>O Supervisor Técnico será notificado por e-mail para confirmar data e equipe com o cliente.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mInstalacao')">Cancelar</button><button class="btn btn-advance" onclick="confirmAgendarInstalacao()">Confirmar</button></div></div></div>
-<div id="mRelatorio" class="modal-overlay"><div class="modal m-advance"><h3>Confirmar Agendamento?</h3><p>Confirme que a data, horário e técnico estão corretos. O processo avançará para o anexo do relatório final.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mRelatorio')">Cancelar</button><button class="btn btn-advance" onclick="confirmIniciarRelatorio()">Avançar</button></div></div></div>
-<div id="mConcluir" class="modal-overlay"><div class="modal m-approve"><h3>Encerrar Processo?</h3><p>O processo será encerrado definitivamente. Relatório assinado e checklist devem estar anexados. ADM e Gestor serão notificados.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mConcluir')">Cancelar</button><button class="btn btn-conclude" onclick="confirmConcluir()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Encerrar</button></div></div></div>
+<div id="mAjuste" class="modal-overlay"><div class="modal m-reject"><h3>Solicitar Ajuste?</h3><p>A solicitação retornará a Vendas com as orientações do Supervisor AS&TS registradas.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mAjuste')">Cancelar</button><button class="btn btn-clear" onclick="confirmSolicitarAjuste()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5h9M9 4l2.5 2.5L9 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Solicitar Ajuste</button></div></div></div>
+<div id="mFornecedor" class="modal-overlay"><div class="modal m-advance"><h3>Aprovar e Encaminhar?</h3><p>O pedido será enviado formalmente via e-mail e registrado no Firebase. O Nº do Pedido será gerado automaticamente.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mFornecedor')">Cancelar</button><button class="btn btn-supplier" onclick="confirmFornecedor()">Acionar</button></div></div></div>
+<div id="mExpedir" class="modal-overlay"><div class="modal m-advance"><h3>Informar NF e Liberação?</h3><p>A máquina será marcada como expedida. NF e romaneio devem estar anexados e serão armazenados no Firebase.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mExpedir')">Cancelar</button><button class="btn btn-advance" onclick="confirmExpedicao()">Confirmar</button></div></div></div>
+<div id="mInstalacao" class="modal-overlay"><div class="modal m-advance"><h3>Notificar Logística?</h3><p>O Supervisor AS&TS será notificado para informar a data de instalação.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mInstalacao')">Cancelar</button><button class="btn btn-advance" onclick="confirmAgendarInstalacao()">Confirmar</button></div></div></div>
+<div id="mRelatorio" class="modal-overlay"><div class="modal m-advance"><h3>Confirmar Programação da Instalação?</h3><p>Confirme a data de instalação. Depois da execução, o relatório poderá ser anexado para encerramento.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mRelatorio')">Cancelar</button><button class="btn btn-advance" onclick="confirmIniciarRelatorio()">Avançar</button></div></div></div>
+<div id="mConcluir" class="modal-overlay"><div class="modal m-approve"><h3>Encerrar Processo?</h3><p>O processo será encerrado definitivamente. O relatório de instalação será anexado ao histórico e a solicitação será encerrada.</p><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mConcluir')">Cancelar</button><button class="btn btn-conclude" onclick="confirmConcluir()"><svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Encerrar</button></div></div></div>
 <div id="mSuccess" class="modal-overlay"><div class="modal m-approve" style="text-align:center;padding:32px 24px"><div style="width:58px;height:58px;border-radius:50%;background:#e8f5e9;border:2px solid #a5d6a7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px">✓</div><h3 style="font-size:17px;margin-bottom:8px">Processo Concluído!</h3><p>Todos os documentos foram registrados e as partes notificadas.</p><div style="margin:14px 0 18px;padding:10px;background:#e8f5e9;border-radius:6px;font-size:11.5px;color:#2e7d32;font-family:'DM Mono',monospace">Protocolo: WR-2025-0847 · 20/06/2025</div><button class="btn btn-secondary" onclick="closeMod('mSuccess');goPage('home')">Voltar ao Início</button></div></div>
-<div id="mPendentes" class="modal-overlay"><div class="modal m-advance" style="width:520px;max-width:95vw"><h3>Pendentes de Aprovação</h3><p style="margin-bottom:14px">3 solicitações aguardam parecer do Gestor de Vendas.</p><div id="pendList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px"></div><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mPendentes')">Fechar</button></div></div></div>
+<div id="mPendentes" class="modal-overlay"><div class="modal m-advance" style="width:520px;max-width:95vw"><h3>Pendentes de Aprovação</h3><p style="margin-bottom:14px">3 solicitações aguardam parecer do Supervisor AS&TS.</p><div id="pendList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px"></div><div class="modal-btns"><button class="btn btn-secondary" onclick="closeMod('mPendentes')">Fechar</button></div></div></div>
 
 <script>
 // ════════════════════════════════════════════════════════════
@@ -1929,8 +1954,23 @@ function showLoading(show) {
 
 
 // ─── FIREBASE CONFIGURATION ──────────────────────────────────
-// Configuração carregada dinamicamente via Cloud Function GET /api/config
-// Não edite os valores abaixo — eles são preenchidos em runtime.
+// MODO GITHUB PAGES: usa configuração Firebase embutida
+// Substitua os valores placeholder pelos dados reais do seu projeto Firebase
+// Obter em: Firebase Console → Projeto → Settings → SDK Setup
+const GITHUB_PAGES_FIREBASE_CONFIG = {
+  apiKey:           'AIzaSyBp_eQLXyDcvGbKP8AX3MbTIUKT3VaXxfE',
+  authDomain:       'workrail-solenis.firebaseapp.com',
+  projectId:        'workrail-solenis',
+  storageBucket:    'workrail-solenis.firebasestorage.app',
+  messagingSenderId: '204626918677',
+  appId:            '1:204626918677:web:324d2ab04663a32a14bd1c'
+};
+
+// URL da Cloud Function para ambiente em produção (deixar vazio para GitHub Pages)
+// Se preenchido, o sistema tentará buscar config remota
+const API_CONFIG_URL = '';
+
+// Configuração carregada em runtime
 let FIREBASE_CONFIG = null;
 
 // ─── FORMSUBMIT CONFIGURATION ────────────────────────────────
@@ -1946,7 +1986,7 @@ const EMAIL_RECIPIENTS = {
 // ─── STATUS PADRONIZADOS DO FLUXO ────────────────────────────
 const STATUS = {
   RASCUNHO:           { key:'RASCUNHO',           label:'Rascunho',        chip:'c-pending'  },
-  AGUARDANDO_GESTOR:  { key:'AGUARDANDO_GESTOR',  label:'Ag. Gestor',      chip:'c-pending'  },
+  AGUARDANDO_GESTOR:  { key:'AGUARDANDO_GESTOR',  label:'Ag. Supervisor',  chip:'c-pending'  },
   EM_ANALISE_GESTOR:  { key:'EM_ANALISE_GESTOR',  label:'Em Análise',      chip:'c-analysis' },
   AGUARDA_AJUSTE:     { key:'AGUARDA_AJUSTE',     label:'Ag. Ajuste',      chip:'c-pending'  },
   REPROVADO:          { key:'REPROVADO',          label:'Reprovado',       chip:'c-rejected' },
@@ -1955,6 +1995,7 @@ const STATUS = {
   COM_FORNECEDOR:     { key:'COM_FORNECEDOR',     label:'Com Fornecedor',  chip:'c-supplier' },
   NF_ANEXADA:         { key:'NF_ANEXADA',         label:'NF Anexada',      chip:'c-transit'  },
   EM_LOGISTICA:       { key:'EM_LOGISTICA',       label:'Em Trânsito',     chip:'c-transit'  },
+  AGUARDANDO_INSTALACAO:{ key:'AGUARDANDO_INSTALACAO',label:'Logística',      chip:'c-transit'  },
   INSTALACAO_AGENDADA:{ key:'INSTALACAO_AGENDADA',label:'Ag. Instalação',  chip:'c-install'  },
   INSTALACAO_CONCLUIDA:{key:'INSTALACAO_CONCLUIDA',label:'Instalado',      chip:'c-install'  },
   ENCERRADO:          { key:'ENCERRADO',          label:'Concluído',       chip:'c-done'     }
@@ -1977,7 +2018,7 @@ let currentUser = null;
 const PERFIS = {
   super_admin:       { label:'Administrador',   chip:'c-admin',    cor:'#b71c1c' },
   vendas:            { label:'Vendas',         chip:'c-pending',  cor:'#e65100' },
-  gestor:            { label:'Gestor',          chip:'c-analysis', cor:'#1565c0' },
+  gestor:            { label:'Supervisor AS&TS', chip:'c-analysis', cor:'#1565c0' },
   adm:               { label:'ADM Vendas',      chip:'c-approved', cor:'#2e7d32' },
   fornecedor_ebst:   { label:'Fornecedor EBST', chip:'c-supplier', cor:'#4527a0' },
   fornecedor_hobart: { label:'Fornecedor Hobart',chip:'c-supplier',cor:'#4527a0' }
@@ -1994,21 +2035,98 @@ function isFornecedor() {
   return currentUser?.perfil?.startsWith('fornecedor_');
 }
 
+
+const DEFAULT_MACHINE_MODELS = [
+  { fabricante:'Hobart', modelo:'Ecomax 403' },
+  { fabricante:'Hobart', modelo:'Ecomax 503' },
+  { fabricante:'Hobart', modelo:'Ecomax 603' },
+  { fabricante:'Hobart', modelo:'CCR 200 C NR-12' },
+  { fabricante:'Hobart', modelo:'CCR 200 S NR-12' },
+  { fabricante:'Hobart', modelo:'CCR 260 C NR-12' },
+  { fabricante:'Hobart', modelo:'CCR 260 S NR-12' },
+  { fabricante:'EBST', modelo:'HD-50 Remanufaturada' },
+  { fabricante:'EBST', modelo:'HD-80 Remanufaturada' },
+  { fabricante:'EBST', modelo:'HD-50 Nova' },
+  { fabricante:'EBST', modelo:'HD-80 Nova' },
+  { fabricante:'EBST', modelo:'HD-200' },
+  { fabricante:'EBST', modelo:'HD-200 MOB' }
+];
+
+function popularModelosSolicitacao(modelos) {
+  const sel = document.getElementById('modeloMaquinaSelect');
+  if (!sel) return;
+  const atual = sel.value;
+  const grupos = {};
+  (modelos && modelos.length ? modelos : DEFAULT_MACHINE_MODELS).forEach(item => {
+    const fabricante = item.fabricante || 'Outros';
+    if (!grupos[fabricante]) grupos[fabricante] = [];
+    grupos[fabricante].push(item.modelo || item.nome || '');
+  });
+  sel.innerHTML = '<option value="">Selecionar modelo...</option>' + Object.entries(grupos)
+    .filter(([, itens]) => itens.length)
+    .map(([fabricante, itens]) => '<optgroup label="' + fabricante + '">' + itens.filter(Boolean).map(m => '<option>' + m + '</option>').join('') + '</optgroup>')
+    .join('');
+  if (atual) sel.value = atual;
+}
+
+async function carregarModelosSolicitacao() {
+  if (!db) {
+    popularModelosSolicitacao(DEFAULT_MACHINE_MODELS);
+    return;
+  }
+  try {
+    const snap = await db.collection('modelos_maquinas').where('ativo','!=',false).get();
+    if (snap.empty) {
+      popularModelosSolicitacao(DEFAULT_MACHINE_MODELS);
+      return;
+    }
+    const modelos = snap.docs.map(d => d.data()).filter(d => d.modelo);
+    popularModelosSolicitacao(modelos);
+  } catch(e) {
+    popularModelosSolicitacao(DEFAULT_MACHINE_MODELS);
+  }
+}
+
+function coletarDadosSupervisor() {
+  return {
+    fornecedorSugerido: document.getElementById('supervisorFornecedor')?.value || '',
+    modeloValidado: document.getElementById('supervisorModeloValidado')?.value?.trim() || '',
+    voltagem: document.getElementById('supervisorVoltagem')?.value?.trim() || '',
+    capacidadeObservacao: document.getElementById('supervisorCapacidade')?.value?.trim() || ''
+  };
+}
+
+async function obterEmailFornecedor(nomeFornecedor) {
+  if (!nomeFornecedor || !db) return EMAIL_RECIPIENTS.fornecedor;
+  try {
+    const snap = await db.collection('fornecedores').where('nome','==',nomeFornecedor).limit(1).get();
+    if (!snap.empty) {
+      const dados = snap.docs[0].data();
+      if (dados?.email) return dados.email;
+    }
+  } catch(e) {}
+  return EMAIL_RECIPIENTS.fornecedor;
+}
+
 // ─── FLOW CONSTANTS ──────────────────────────────────────────
 const FLOW        = ['solicitacao','gestor','adm','fornecedor','logistica','instalacao','relatorio'];
-const FLOW_LABELS = ['01·Solicitação','02·Gestor','03·ADM Vendas','04·Fornecedor','05·Entrega','06·Instalação','07·Relatório'];
+const FLOW_LABELS = ['01·Solicitação','02·Supervisor AS&TS','03·ADM Vendas','04·Fornecedor','05·Logística','06·Instalação','07·Encerramento'];
 let currentPage = 'home';
 let currentFlow = null;
 let visitedFlow = new Set();
 
 // ════════════════════════════════════════════════════════════
-// FIREBASE — INICIALIZAÇÃO VIA /api/config
+// FIREBASE — INICIALIZAÇÃO COM FALLBACK PARA GITHUB PAGES
 // ════════════════════════════════════════════════════════════
 
 /**
- * Busca a configuração do Firebase na Cloud Function /api/config,
- * inicializa o SDK e registra o observer de autenticação.
- * Em caso de falha, exibe mensagem de erro — nunca faz bypass de auth.
+ * Inicializa o Firebase com estratégia de fallback:
+ * 1. Se API_CONFIG_URL estiver preenchido, tenta buscar config remota
+ * 2. Senão, usa GITHUB_PAGES_FIREBASE_CONFIG embutida
+ * 3. Registra observer de autenticação
+ *
+ * MODO GITHUB PAGES: usa configuração embutida (GITHUB_PAGES_FIREBASE_CONFIG)
+ * Não depende de /api/config no GitHub Pages estático.
  */
 async function initFirebase() {
   if (typeof firebase === 'undefined') {
@@ -2020,24 +2138,56 @@ async function initFirebase() {
   try {
     showLoading(true);
 
-    // ── Busca configuração na Cloud Function ─────────────────
-    const resp = await fetch('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
+    // ── Estratégia 1: Tentar config remota (se URL configurada) ───
+    if (API_CONFIG_URL && API_CONFIG_URL.trim()) {
+      console.log('[WORKRAIL] Tentando carregar configuração remota...');
+      try {
+        const resp = await fetch(API_CONFIG_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
 
-    if (!resp.ok) {
-      throw new Error(`Falha ao obter configuração do servidor (HTTP ${resp.status})`);
+        if (resp.ok) {
+          FIREBASE_CONFIG = await resp.json();
+          if (FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId) {
+            console.log('[WORKRAIL] Configuração remota carregada com sucesso.');
+            _initializeFirebaseApp();
+            return;
+          }
+        }
+      } catch(remoteError) {
+        console.warn('[WORKRAIL] Falha ao carregar config remota, tentando fallback...', remoteError.message);
+      }
     }
 
-    FIREBASE_CONFIG = await resp.json();
+    // ── Estratégia 2: Usar config embutida (GitHub Pages) ───────
+    console.log('[WORKRAIL] Usando configuração embutida (GitHub Pages)...');
+    FIREBASE_CONFIG = GITHUB_PAGES_FIREBASE_CONFIG;
 
     if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey || !FIREBASE_CONFIG.projectId) {
-      throw new Error('Configuração Firebase incompleta recebida do servidor.');
+      throw new Error('Configuração Firebase não está preenchida. Substitua os placeholders em GITHUB_PAGES_FIREBASE_CONFIG.');
     }
 
-    // ── Inicializa o Firebase com a config real ───────────────
+    _initializeFirebaseApp();
+
+  } catch(e) {
+    showLoading(false);
+    console.error('[WORKRAIL] Erro crítico ao inicializar Firebase:', e);
+    mostrarErroInicializacao(
+      'Configuração Firebase não disponível. ' +
+      'Verifique se as credenciais estão corretas no código.<br>' +
+      '<small style="opacity:.7">Detalhe: ' + (e.message || e) + '</small>'
+    );
+  }
+}
+
+/**
+ * Função auxiliar: Inicializa Firebase com config validada
+ */
+function _initializeFirebaseApp() {
+  try {
+    // ── Inicializa o Firebase ───────────────────────────────────
     firebase.initializeApp(FIREBASE_CONFIG);
     db      = firebase.firestore();
     storage = firebase.storage();
@@ -2045,23 +2195,42 @@ async function initFirebase() {
     firebaseOk = true;
     console.log('[WORKRAIL] Firebase inicializado com sucesso.');
 
-    // ── Observa estado de autenticação ───────────────────────
-    auth.onAuthStateChanged(async (user) => {
-      showLoading(false);
-      if (user) {
-        await carregarPerfilUsuario(user);
-      } else {
+    // ── Verifica sessão armazenada no localStorage ────────────────
+    const sessaoArmazenada = localStorage.getItem('WORKRAIL_SESSION');
+    if (sessaoArmazenada) {
+      try {
+        currentUser = JSON.parse(sessaoArmazenada);
+        console.log('[WORKRAIL] Sessão restaurada para:', currentUser.username);
+        showLoading(false);
+        document.getElementById('login-overlay').classList.add('hidden');
+        atualizarInterfaceAposPerfil();
+      } catch(e) {
+        console.error('[WORKRAIL] Erro ao restaurar sessão:', e);
+        localStorage.removeItem('WORKRAIL_SESSION');
         currentUser = null;
+        showLoading(false);
         document.getElementById('login-overlay').classList.remove('hidden');
+      }
+    } else {
+      showLoading(false);
+      currentUser = null;
+      document.getElementById('login-overlay').classList.remove('hidden');
+    }
+
+    // ── Observa estado de autenticação (legacy Firebase Auth) ──────
+    auth.onAuthStateChanged(async (user) => {
+      // Mantido para compatibilidade, mas não é usado no novo sistema
+      if (!currentUser && user) {
+        await carregarPerfilUsuario(user);
       }
     });
 
   } catch(e) {
     showLoading(false);
-    console.error('[WORKRAIL] Erro ao inicializar Firebase:', e);
+    console.error('[WORKRAIL] Erro ao inicializar serviços Firebase:', e);
     mostrarErroInicializacao(
-      'Não foi possível conectar ao servidor. ' +
-      'Verifique sua conexão com a internet e tente novamente.<br>' +
+      'Erro ao conectar com Firebase. ' +
+      'Verifique se a configuração está correta.<br>' +
       '<small style="opacity:.7">Detalhe: ' + (e.message || e) + '</small>'
     );
   }
@@ -2136,7 +2305,7 @@ function abrirRecuperarSenha(e) {
   const m = document.getElementById('modal-recuperar-senha');
   if (!m) return;
   m.style.display = 'flex';
-  document.getElementById('recSenhaEmail').value = document.getElementById('loginEmail')?.value || '';
+  // Campo email já limpo no modal
   document.getElementById('recSenhaMsg').textContent = '';
   document.getElementById('recSenhaBtn').disabled = false;
 }
@@ -2148,31 +2317,34 @@ async function enviarRecuperacao() {
   const emailEl = document.getElementById('recSenhaEmail');
   const msgEl   = document.getElementById('recSenhaMsg');
   const btn     = document.getElementById('recSenhaBtn');
-  const email   = emailEl.value.trim();
+  const email = emailEl ? emailEl.value.trim() : '';
   msgEl.textContent = '';
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  if (!email) {
     msgEl.style.color = '#c62828';
-    msgEl.textContent = 'Informe um e-mail válido.';
-    return;
-  }
-  if (!auth) {
-    msgEl.style.color = '#c62828';
-    msgEl.textContent = 'Firebase não disponível. Contate o administrador.';
+    msgEl.textContent = 'Informe seu email.';
     return;
   }
   btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  btn.textContent = 'Verificando...';
   try {
-    await auth.sendPasswordResetEmail(email);
+    // Verificar se email existe no Firestore
+    const snap = await db.collection('usuarios').where('email', '==', email).limit(1).get();
+    if (snap.empty) {
+      msgEl.style.color = '#c62828';
+      msgEl.textContent = 'Email não encontrado.';
+      btn.disabled = false;
+      btn.textContent = 'Solicitar Reset';
+      return;
+    }
+    const userData = snap.docs[0].data();
     msgEl.style.color = '#2e7d32';
-    msgEl.textContent = '✔ Link enviado! Verifique sua caixa de entrada.';
-    setTimeout(() => fecharRecuperarSenha(), 3000);
+    msgEl.innerHTML = '✔ Email encontrado!<br>Contate o administrador para resetar sua senha.<br><small style="color:#78909c">Usuário: ' + (userData.username || 'não informado') + '</small>';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Solicitar Reset'; }, 3000);
   } catch(e) {
     msgEl.style.color = '#c62828';
-    const errs = {'auth/user-not-found':'E-mail não cadastrado.','auth/invalid-email':'E-mail inválido.'};
-    msgEl.textContent = errs[e.code] || 'Erro ao enviar. Tente novamente.';
+    msgEl.textContent = 'Erro ao verificar. Contate o administrador diretamente.';
     btn.disabled = false;
-    btn.textContent = 'Enviar Link';
+    btn.textContent = 'Solicitar Reset';
   }
 }
 
@@ -2188,16 +2360,11 @@ async function fazerLogin() {
 
   errEl.classList.remove('show');
   if (!email || !senha) {
-    errEl.textContent = 'Preencha e-mail e senha.';
+    errEl.textContent = 'Preencha email e senha.';
     errEl.classList.add('show');
     return;
   }
-  // Validação básica de formato de e-mail
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    errEl.textContent = 'Formato de e-mail inválido.';
-    errEl.classList.add('show');
-    return;
-  }
+
   // Rate limiting
   if (!AuthRateLimiter.check()) {
     const mins = Math.ceil(AuthRateLimiter.lockoutMs() / 60000);
@@ -2210,33 +2377,107 @@ async function fazerLogin() {
   btn.textContent = 'Entrando...';
 
   try {
-    await auth.signInWithEmailAndPassword(email, senha);
+    // ══════════════════════════════════════════════════════════════════
+    // PASSO 1: Autenticar via Firebase Authentication (request.auth)
+    // Este é o ÚNICO lugar onde fazemos requisição sem ter request.auth
+    // ══════════════════════════════════════════════════════════════════
+    let authUser;
+    try {
+      const authResult = await firebase.auth().signInWithEmailAndPassword(email, senha);
+      authUser = authResult.user;
+      console.log('[WORKRAIL] Autenticação Firebase bem-sucedida para:', email);
+    } catch (authError) {
+      if (authError.code === 'auth/wrong-password') {
+        throw { code: 'wrong-password', message: 'Senha incorreta.' };
+      } else if (authError.code === 'auth/user-not-found') {
+        throw { code: 'user-not-found', message: 'Usuário não encontrado.' };
+      } else {
+        throw { code: 'auth-error', message: authError.message || 'Erro ao autenticar. Tente novamente.' };
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // PASSO 2: Agora que request.auth está válido, ler perfil do Firestore
+    // A security rule permite leitura pois isAuthenticated() == true
+    // ══════════════════════════════════════════════════════════════════
+    const usuariosRef = db.collection('usuarios');
+    const snap = await usuariosRef.where('email', '==', email).limit(1).get();
+
+    if (snap.empty) {
+      // Email autenticado mas sem perfil no Firestore
+      await firebase.auth().signOut();
+      throw { code: 'user-error', message: 'Usuário não encontrado no Firestore. Contate o administrador.' };
+    }
+
+    const usuarioDoc = snap.docs[0];
+    const usuarioData = usuarioDoc.data();
+
+    // ══════════════════════════════════════════════════════════════════
+    // PASSO 3: Validar se a conta está ativa
+    // ══════════════════════════════════════════════════════════════════
+    if (!usuarioData.ativo) {
+      await firebase.auth().signOut();
+      throw { code: 'user-disabled', message: 'Esta conta foi desativada pelo administrador.' };
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // PASSO 4: Login bem-sucedido - armazenar sessão
+    // ══════════════════════════════════════════════════════════════════
     AuthRateLimiter.reset();
-    // onAuthStateChanged cuida do resto
+
+    const sessaoData = {
+      uid: authUser.uid,  // Usar uid do Firebase Auth como fonte canônica
+      username: usuarioData.username,
+      nome: usuarioData.nome,
+      email: usuarioData.email,
+      perfil: usuarioData.perfil,
+      fornecedor: usuarioData.fornecedor || null,
+      ativo: usuarioData.ativo,
+      loginEm: new Date().toISOString(),
+      autenticadoEm: authUser.metadata.creationTime
+    };
+
+    localStorage.setItem('WORKRAIL_SESSION', JSON.stringify(sessaoData));
+
+    // Carregar perfil do usuário
+    currentUser = sessaoData;
+    document.getElementById('login-overlay').classList.add('hidden');
+
+    // Atualizar interface
+    atualizarInterfaceAposPerfil();
+
+    console.log('[WORKRAIL] Login bem-sucedido para:', email);
+
   } catch(e) {
+    // Se conseguiu autenticar mas depois falhou, fazer logout
+    if (firebase.auth().currentUser) {
+      await firebase.auth().signOut();
+    }
+
     AuthRateLimiter.record();
     const remaining = AuthRateLimiter.remaining();
     const msgs = {
-      'auth/user-not-found':    'Usuário não encontrado.',
-      'auth/wrong-password':    'Senha incorreta.',
-      'auth/invalid-email':     'E-mail inválido.',
-      'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.',
-      'auth/user-disabled':     'Esta conta foi desativada pelo administrador.',
-      'auth/invalid-credential':'E-mail ou senha incorretos.'
+      'user-not-found':    'Usuário não encontrado.',
+      'wrong-password':    'Senha incorreta.',
+      'user-disabled':     'Esta conta foi desativada pelo administrador.',
+      'user-error':        'Erro na configuração do usuário. Contate o administrador.',
+      'auth-error':        'Erro de autenticação. Tente novamente.'
     };
-    let msg = msgs[e.code] || 'Erro ao entrar. Tente novamente.';
+    let msg = msgs[e.code] || e.message || 'Erro ao entrar. Tente novamente.';
     if (remaining <= 2 && remaining > 0) msg += ` (${remaining} tentativa${remaining===1?'':'s'} restante${remaining===1?'':'s'})`;
     errEl.textContent = msg;
     errEl.classList.add('show');
     btn.disabled = false;
     btn.textContent = 'Entrar';
+    console.error('[WORKRAIL] Erro de login:', e);
   }
 }
 
 async function fazerLogout() {
   if (!confirm('Deseja sair do sistema?')) return;
   try {
-    if (auth) await auth.signOut();
+    // Limpar sessão
+    localStorage.removeItem('WORKRAIL_SESSION');
     currentUser = null;
     document.getElementById('login-overlay').classList.remove('hidden');
     document.getElementById('loginEmail').value = '';
@@ -2244,9 +2485,34 @@ async function fazerLogout() {
     document.getElementById('loginBtn').disabled = false;
     document.getElementById('loginBtn').textContent = 'Entrar';
     document.getElementById('loginError').classList.remove('show');
+    console.log('[WORKRAIL] Logout realizado com sucesso.');
   } catch(e) {
     console.error('[WORKRAIL] Erro ao sair:', e);
   }
+}
+
+// ──── Atualizar interface após login bem-sucedido ────────────────────
+function atualizarInterfaceAposPerfil() {
+  showLoading(false);
+
+  // Aplicar menu por perfil
+  aplicarControleMenu();
+
+  // Atualizar nome do usuário na topbar
+  if (currentUser) {
+    const nomeExibicao = currentUser.nome || currentUser.username;
+    const userInitial = (currentUser.nome || currentUser.username).charAt(0).toUpperCase();
+
+    // Atualizar elemento de usuário na topbar (se existir)
+    const tbUser = document.querySelector('.tb-user');
+    if (tbUser) {
+      tbUser.textContent = userInitial;
+      tbUser.title = nomeExibicao;
+    }
+  }
+
+  // Ir para a tela inicial/dashboard
+  irPara('screen-home');
 }
 
 async function carregarPerfilUsuario(firebaseUser) {
@@ -2293,6 +2559,7 @@ async function carregarPerfilUsuario(firebaseUser) {
     document.getElementById('login-overlay').classList.add('hidden');
     aplicarPerfilNaInterface();
     await carregarHistoricoFirebase();
+    await carregarModelosSolicitacao();
 
   } catch(e) {
     console.error('[WORKRAIL] Erro ao carregar perfil:', e);
@@ -2511,40 +2778,42 @@ async function adicionarDocumentos(id, docs) {
 async function carregarHistoricoFirebase() {
   if (!firebaseOk) return;
   try {
-    let query = db.collection('solicitacoes').orderBy('criadoEm','desc').limit(50);
+    let query = db.collection('solicitacoes').orderBy('criadoEm','desc').limit(100);
 
-    // ── ISOLAMENTO POR FORNECEDOR ─────────────────────────────
-    // Fornecedores só vêem suas próprias solicitações — NUNCA as de concorrentes.
     if (isFornecedor() && currentUser.fornecedor) {
       query = db.collection('solicitacoes')
         .where('dadosAdm.fornecedor', '==', currentUser.fornecedor)
-        .orderBy('criadoEm','desc').limit(50);
+        .orderBy('criadoEm','desc').limit(100);
     }
 
     const snap = await query.get();
     if (snap.empty) {
-      // Mantém dados estáticos de demonstração
       buildHistoryTable();
       buildFilters();
       return;
     }
-    const rows = snap.docs.map(d => {
+
+    let rows = snap.docs.map(d => {
       const data = d.data();
       const st   = STATUS[data.status] || STATUS.RASCUNHO;
       return {
         id:        d.id,
         code:      data.protocolo || d.id,
         client:    data.dadosCliente?.nomeCliente || '—',
-        model:     data.dadosSolicitacao?.modeloMaquina || '—',
+        model:     data.dadosSolicitacao?.modeloMaquina || data.parecerGestor?.especificacao?.modeloValidado || '—',
         resp:      data.dadosSolicitacao?.representante || '—',
-        fornecedor:data.dadosAdm?.fornecedor || '—',
-        date:      data.criadoEm?.toDate
-                     ? data.criadoEm.toDate().toLocaleDateString('pt-BR')
-                     : '—',
+        fornecedor:data.dadosAdm?.fornecedor || data.parecerGestor?.especificacao?.fornecedorSugerido || '—',
+        createdByUid: data.criadoPorUid || null,
+        date:      data.criadoEm?.toDate ? data.criadoEm.toDate().toLocaleDateString('pt-BR') : '—',
         status:    st.chip,
         statusTxt: st.label
       };
     });
+
+    if (currentUser?.perfil === 'vendas') {
+      rows = rows.filter(r => r.createdByUid === currentUser.uid || r.resp === currentUser.nome);
+    }
+
     HISTORY.splice(0, HISTORY.length, ...rows);
     buildHistoryTable();
     buildFilters();
@@ -2652,8 +2921,10 @@ function validateStep_Solicitacao() {
 
 function validateStep_Gestor(tipo) {
   const obs = document.querySelector('#screen-gestor textarea')?.value?.trim();
-  if (!obs) {
-    showToast('Observações do Gestor são obrigatórias antes de prosseguir.', 'error');
+  const fornecedor = document.getElementById('supervisorFornecedor')?.value;
+  const modelo = document.getElementById('supervisorModeloValidado')?.value?.trim();
+  if (!fornecedor || !modelo || !obs) {
+    showToast('Fornecedor recomendado, modelo validado e observações do Supervisor AS&TS são obrigatórios.', 'error');
     return false;
   }
   return true;
@@ -2682,7 +2953,7 @@ function validateStep_Fornecedor() {
   const sc = '#screen-fornecedor ';
 
   if (!lerInput(sc + 'input[placeholder="000.000.000"]'))        erros.push('Número da NF');
-  if (!document.getElementById('dataColeta')?.value)            erros.push('Data da Coleta');
+  if (!document.getElementById('dataColeta')?.value)            erros.push('Data de Liberação');
 
   if (!arquivoAnexado('fNF'))  erros.push('Nota Fiscal (arquivo obrigatório)');
 
@@ -2696,7 +2967,7 @@ function validateStep_Fornecedor() {
 function validateStep_Logistica() {
   const dataColeta = document.getElementById('dataColetaConfirmada')?.value;
   if (!dataColeta) {
-    showToast('Informe a Data da Coleta Confirmada para prosseguir.', 'error');
+    showToast('Informe a data prevista de coleta para prosseguir.', 'error');
     return false;
   }
   return true;
@@ -2781,7 +3052,8 @@ function coletarDadosSolicitacao() {
       secante:         sels[3]?.value || '',
       comentarios:     document.querySelector(sc + 'textarea')?.value || '',
       representante:   currentUser?.nome || 'Representante'
-    }
+    },
+    criadoPorUid: currentUser?.uid || null
   };
 }
 
@@ -2809,8 +3081,9 @@ function coletarDadosFornecedor() {
 function coletarDadosLogistica() {
   return {
     dataColetaConfirmada: document.getElementById('dataColetaConfirmada')?.value || '',
-    responsavelColeta:    lerInput('#screen-logistica input[placeholder*="responsável"]'),
-    supervisorNotificado: document.getElementById('tSupv')?.checked ? 'Sim' : 'Não'
+    responsavelColeta:    lerInput('#screen-logistica input[placeholder*="Transportadora"]') || lerInput('#screen-logistica input[placeholder*="responsável"]'),
+    supervisorNotificado: document.getElementById('tSupv')?.checked ? 'Sim' : 'Não',
+    observacoes:          lerInput('#screen-logistica input[placeholder*="coleta e entrega"]')
   };
 }
 
@@ -2837,7 +3110,7 @@ function coletarDadosRelatorio() {
 // CONFIRM FUNCTIONS — Lógica de cada etapa do fluxo
 // ════════════════════════════════════════════════════════════
 
-// 01 → VENDAS envia para Gestor
+// 01 → VENDAS envia para Supervisor AS&TS
 async function confirmEnviarGestor() {
   if (!validateStep_Solicitacao()) return;
   closeMod('mEnviar');
@@ -2872,7 +3145,7 @@ async function confirmEnviarGestor() {
     );
 
     pendingFiles = {};
-    showToast('Solicitação enviada ao Gestor! Protocolo: ' + prot, 'success');
+    showToast('Solicitação enviada ao Supervisor AS&TS! Protocolo: ' + prot, 'success');
     go('gestor');
   } catch(e) {
     console.error(e);
@@ -2896,22 +3169,35 @@ async function confirmAprovar() {
                    || document.getElementById('campoPedidoNum')?.value
                    || '';
 
-    const hist = entradaHistorico('APROVADO_GESTOR','Gestor','gestor',obs);
+    const dadosSupervisor = coletarDadosSupervisor();
+    const hist = entradaHistorico('APROVADO_GESTOR','Supervisor AS&TS','gestor',obs);
     await atualizarSolicitacao(currentSolicitacaoId,
-      { 'parecerGestor.decisao':'APROVADO', 'parecerGestor.observacoes':obs, 'dadosAdm.numeroPedido': numPedido },
+      {
+        'parecerGestor.decisao':'APROVADO',
+        'parecerGestor.observacoes':obs,
+        'parecerGestor.especificacao': dadosSupervisor,
+        'dadosAdm.numeroPedido': numPedido,
+        'dadosAdm.fornecedor': dadosSupervisor.fornecedorSugerido || currentSolicitacao?.dadosAdm?.fornecedor || ''
+      },
       STATUS.APROVADO_GESTOR.key, 'adm', hist
     );
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.adm,
-      'Solicitação Aprovada — Revisão Contratual',
-      `A solicitação foi aprovada pelo Gestor e aguarda revisão contratual.`,
-      prot, { Observacoes: obs, Cliente: currentSolicitacao?.dadosCliente?.nomeCliente }
+      'Solicitação Aprovada — Aprovação ADM',
+      `A solicitação foi aprovada pelo Supervisor AS&TS e aguarda aprovação administrativa.`,
+      prot, {
+        Observacoes: obs,
+        Cliente: currentSolicitacao?.dadosCliente?.nomeCliente,
+        Fornecedor: dadosSupervisor.fornecedorSugerido,
+        Modelo: dadosSupervisor.modeloValidado,
+        Voltagem: dadosSupervisor.voltagem
+      }
     );
     await enviarNotificacao(FORMSUBMIT_EMAIL,
-      'Solicitação Aprovada pelo Gestor', `Obs: ${obs}`, prot);
+      'Solicitação Aprovada pelo Supervisor AS&TS', `Obs: ${obs}`, prot);
 
     pendingFiles = {};
-    showToast('Solicitação aprovada e encaminhada ao ADM de Vendas!', 'success');
+    showToast('Solicitação aprovada tecnicamente e encaminhada ao ADM de Vendas!', 'success');
     go('adm');
   } catch(e) {
     console.error(e);
@@ -2932,7 +3218,7 @@ async function confirmRejeitar() {
   closeMod('mRejeitar');
   showLoading(true);
   try {
-    const hist = entradaHistorico('REPROVADO','Gestor','gestor',obs);
+    const hist = entradaHistorico('REPROVADO','Supervisor AS&TS','gestor',obs);
     await atualizarSolicitacao(currentSolicitacaoId,
       { 'parecerGestor.decisao':'REPROVADO', 'parecerGestor.observacoes':obs },
       STATUS.REPROVADO.key, 'solicitacao', hist
@@ -2941,7 +3227,7 @@ async function confirmRejeitar() {
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.vendas,
       'Solicitação Reprovada — Revisão Necessária',
-      `A solicitação foi reprovada pelo Gestor.`,
+      `A solicitação foi reprovada pelo Supervisor AS&TS.`,
       prot, { Motivo: obs, Cliente: currentSolicitacao?.dadosCliente?.nomeCliente }
     );
     await enviarNotificacao(FORMSUBMIT_EMAIL,
@@ -2968,7 +3254,7 @@ async function confirmSolicitarAjuste() {
   closeMod('mAjuste');
   showLoading(true);
   try {
-    const hist = entradaHistorico('AGUARDA_AJUSTE','Gestor','gestor',`Ajuste solicitado: ${obs}`);
+    const hist = entradaHistorico('AGUARDA_AJUSTE','Supervisor AS&TS','gestor',`Ajuste solicitado: ${obs}`);
     await atualizarSolicitacao(currentSolicitacaoId,
       { 'parecerGestor.decisao':'AGUARDA_AJUSTE', 'parecerGestor.observacoes':obs },
       STATUS.AGUARDA_AJUSTE.key, 'solicitacao', hist
@@ -2976,8 +3262,8 @@ async function confirmSolicitarAjuste() {
 
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.vendas,
-      'Ajuste Solicitado pelo Gestor',
-      `O Gestor solicitou ajustes na solicitação.`,
+      'Ajuste Solicitado pelo Supervisor AS&TS',
+      `O Supervisor AS&TS solicitou ajustes na solicitação.`,
       prot, { Orientacoes: obs, Cliente: currentSolicitacao?.dadosCliente?.nomeCliente }
     );
     await enviarNotificacao(FORMSUBMIT_EMAIL,
@@ -3005,8 +3291,10 @@ async function confirmFornecedor() {
       [['fContrato','CONTRATO_ASSINADO']], 'contratos'
     );
 
+    const fornecedorFinal = dadosAdm.fornecedor || currentSolicitacao?.parecerGestor?.especificacao?.fornecedorSugerido || '';
+    dadosAdm.fornecedor = fornecedorFinal;
     const hist = entradaHistorico('ENVIADO_FORNECEDOR','ADM de Vendas','adm',
-      `Pedido ${dadosAdm.numeroPedido} enviado ao fornecedor ${dadosAdm.fornecedor}`);
+      `Pedido ${dadosAdm.numeroPedido} aprovado e enviado ao fornecedor ${fornecedorFinal}`);
     await atualizarSolicitacao(currentSolicitacaoId,
       { dadosAdm }, STATUS.COM_FORNECEDOR.key, 'fornecedor', hist
     );
@@ -3016,9 +3304,10 @@ async function confirmFornecedor() {
     }
 
     const prot = currentSolicitacao?.protocolo;
-    await enviarNotificacao(EMAIL_RECIPIENTS.fornecedor,
+    const emailFornecedor = await obterEmailFornecedor(dadosAdm.fornecedor);
+    await enviarNotificacao(emailFornecedor,
       'Pedido Recebido — Preparar Equipamento',
-      `Pedido recebido. Por favor, prepare e expida o equipamento.`,
+      `Pedido aprovado. Preparar a máquina, anexar NF e informar a data de liberação.`,
       prot, {
         Pedido: dadosAdm.numeroPedido,
         Fornecedor: dadosAdm.fornecedor,
@@ -3064,7 +3353,7 @@ async function confirmExpedicao() {
     );
 
     const hist = entradaHistorico('NF_ANEXADA_EXPEDIDO','Fornecedor','fornecedor',
-      `NF ${dados.numeroNF} · Data Coleta: ${dados.dataColeta}`);
+      `NF ${dados.numeroNF} · Liberação: ${dados.dataColeta}`);
     await atualizarSolicitacao(currentSolicitacaoId,
       { dadosFornecedor: dados }, STATUS.NF_ANEXADA.key, 'logistica', hist
     );
@@ -3076,13 +3365,13 @@ async function confirmExpedicao() {
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.adm,
       'Máquina Expedida — NF Disponível',
-      `A máquina foi expedida. Acompanhe a logística.`,
+      `NF anexada e máquina liberada pelo fornecedor. A ADM deve acionar a logística para coleta e entrega.`,
       prot, { NF: dados.numeroNF, DataColeta: dados.dataColeta,
               Cliente: currentSolicitacao?.dadosCliente?.nomeCliente }
     );
     await enviarNotificacao(EMAIL_RECIPIENTS.gestor,
-      'Máquina Em Trânsito',
-      `Equipamento expedido e em trânsito.`,
+      'Máquina Liberada pelo Fornecedor',
+      `Equipamento liberado pelo fornecedor e aguardando logística.`,
       prot, { NF: dados.numeroNF, DataColeta: dados.dataColeta }
     );
     await enviarNotificacao(FORMSUBMIT_EMAIL,
@@ -3099,7 +3388,7 @@ async function confirmExpedicao() {
   }
 }
 
-// 05 → ADM/Gestor agenda instalação
+// 05 → ADM aciona logística e encaminha ao Supervisor AS&TS
 async function confirmAgendarInstalacao() {
   if (!validateStep_Logistica()) return;
   closeMod('mInstalacao');
@@ -3111,10 +3400,10 @@ async function confirmAgendarInstalacao() {
       [['fEntrega','COMPROVANTE_ENTREGA']], 'comprovantes'
     );
 
-    const hist = entradaHistorico('INSTALACAO_AGENDADA','ADM de Vendas','logistica',
-      `Coleta confirmada em ${dados.dataColetaConfirmada}. Responsável: ${dados.responsavelColeta}`);
+    const hist = entradaHistorico('LOGISTICA_ACIONADA','ADM de Vendas','logistica',
+      `Logística acionada. Coleta prevista em ${dados.dataColetaConfirmada}. Responsável: ${dados.responsavelColeta}`);
     await atualizarSolicitacao(currentSolicitacaoId,
-      { dadosLogistica: dados }, STATUS.INSTALACAO_AGENDADA.key, 'instalacao', hist
+      { dadosLogistica: dados }, STATUS.AGUARDANDO_INSTALACAO.key, 'instalacao', hist
     );
     if (uploads.length > 0) {
       await adicionarDocumentos(currentSolicitacaoId,
@@ -3123,16 +3412,16 @@ async function confirmAgendarInstalacao() {
 
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.gestor,
-      'Instalação Agendada',
+      'Registrar Data de Instalação',
       `A coleta foi confirmada e a instalação foi agendada.`,
       prot, { DataColeta: dados.dataColetaConfirmada, Responsavel: dados.responsavelColeta,
               Cliente: currentSolicitacao?.dadosCliente?.nomeCliente }
     );
     await enviarNotificacao(FORMSUBMIT_EMAIL,
-      'Instalação Agendada', `Coleta em ${dados.dataColetaConfirmada}`, prot);
+      'Registrar Data de Instalação', `Coleta em ${dados.dataColetaConfirmada}`, prot);
 
     pendingFiles = {};
-    showToast('Instalação agendada! Equipe técnica será notificada.', 'success');
+    showToast('Logística notificada. O Supervisor AS&TS deve informar a data de instalação.', 'success');
     go('instalacao');
   } catch(e) {
     console.error(e);
@@ -3152,11 +3441,11 @@ async function confirmIniciarRelatorio() {
 
     const uploads = [];
 
-    const hist = entradaHistorico('INSTALACAO_CONCLUIDA',
-      dados.tecnico || 'Técnico', 'instalacao',
-      `Instalação executada em ${dados.dataInstalacao} às ${dados.horario}. Checklist: ${dados.checklistMarcados.length} itens`);
+    const hist = entradaHistorico('INSTALACAO_AGENDADA',
+      dados.tecnico || 'Supervisor AS&TS', 'instalacao',
+      `Data de instalação registrada para ${dados.dataInstalacao} às ${dados.horario}. Responsável: ${dados.tecnico}`);
     await atualizarSolicitacao(currentSolicitacaoId,
-      { dadosInstalacao: dados }, STATUS.INSTALACAO_CONCLUIDA.key, 'relatorio', hist
+      { dadosInstalacao: dados }, STATUS.INSTALACAO_AGENDADA.key, 'relatorio', hist
     );
     if (uploads.length > 0) {
       await adicionarDocumentos(currentSolicitacaoId,
@@ -3164,7 +3453,7 @@ async function confirmIniciarRelatorio() {
     }
 
     pendingFiles = {};
-    showToast('Instalação concluída! Gerando relatório final.', 'success');
+    showToast('Data de instalação registrada. Próxima etapa: anexar relatório e finalizar.', 'success');
     go('relatorio');
   } catch(e) {
     console.error(e);
@@ -3199,7 +3488,7 @@ async function confirmConcluir() {
     const prot = currentSolicitacao?.protocolo;
     await enviarNotificacao(EMAIL_RECIPIENTS.adm,
       'Processo Encerrado com Sucesso',
-      `Instalação concluída e processo encerrado. Relatório anexado.`,
+      `Relatório de instalação anexado e solicitação finalizada.`,
       prot, { Cliente: currentSolicitacao?.dadosCliente?.nomeCliente, Protocolo: prot }
     );
     await enviarNotificacao(EMAIL_RECIPIENTS.gestor,
@@ -3271,36 +3560,32 @@ function updateTL(id, lbl) {
 }
 
 const HISTORY = [
-  {code:'WR-2025-0831',client:'Colégio São Paulo',model:'Hobart AMXT',resp:'M. Silva',date:'02/06/2025',status:'c-done',statusTxt:'Concluído'},
-  {code:'WR-2025-0832',client:'Hospital Santa Cruz',model:'Hobart FX',resp:'W. Bastos',date:'03/06/2025',status:'c-transit',statusTxt:'Em Trânsito'},
-  {code:'WR-2025-0833',client:'Rest. Sabor Mineiro',model:'Hobart AM15',resp:'W. Bastos',date:'12/06/2025',status:'c-install',statusTxt:'Em Instalação'},
-  {code:'WR-2025-0834',client:'Buffet Estrela',model:'Fagor AD-48C',resp:'R. Costa',date:'05/06/2025',status:'c-pending',statusTxt:'Ag. Aprovação'},
-  {code:'WR-2025-0835',client:'Hotel Horizonte',model:'Jackson CREW',resp:'M. Silva',date:'07/06/2025',status:'c-approved',statusTxt:'Aprovado'},
-  {code:'WR-2025-0836',client:'Refeitório SABESP',model:'Hobart AMXT',resp:'J. Souza',date:'08/06/2025',status:'c-done',statusTxt:'Concluído'},
-  {code:'WR-2025-0837',client:'Colégio Beta',model:'Hobart AM15',resp:'W. Bastos',date:'09/06/2025',status:'c-rejected',statusTxt:'Reprovado'},
-  {code:'WR-2025-0838',client:'Clínica Vida',model:'Fagor AD-48C',resp:'R. Costa',date:'10/06/2025',status:'c-supplier',statusTxt:'Fornecedor'},
-  {code:'WR-2025-0839',client:'Arena Sports',model:'Hobart FX',resp:'J. Souza',date:'11/06/2025',status:'c-done',statusTxt:'Concluído'},
-  {code:'WR-2025-0840',client:'Indústria ABC',model:'Hobart CLPS50',resp:'M. Silva',date:'13/06/2025',status:'c-analysis',statusTxt:'Em Análise'},
+  {code:'WR-2026-0101',client:'Rede Bistro Central',model:'Ecomax 503',resp:'W. Bastos',date:'12/03/2026',status:'c-transit',statusTxt:'Logística'},
+  {code:'WR-2026-0102',client:'Hospital Vida Sul',model:'HD-80 Nova',resp:'A. Souza',date:'14/03/2026',status:'c-install',statusTxt:'Ag. Instalação'},
+  {code:'WR-2026-0103',client:'Universidade Delta',model:'CCR 200 C NR-12',resp:'W. Bastos',date:'16/03/2026',status:'c-done',statusTxt:'Concluído'},
+  {code:'WR-2026-0104',client:'Hotel Mont Serrat',model:'HD-50 Remanufaturada',resp:'L. Costa',date:'18/03/2026',status:'c-pending',statusTxt:'Ag. Supervisor'},
+  {code:'WR-2026-0105',client:'Indústria Alfa',model:'CCR 260 S NR-12',resp:'R. Lima',date:'21/03/2026',status:'c-approved',statusTxt:'ADM'},
+  {code:'WR-2026-0106',client:'Cozinha Popular Norte',model:'HD-200 MOB',resp:'J. Pinto',date:'23/03/2026',status:'c-supplier',statusTxt:'Fornecedor'},
 ];
 const CHECKLIST_ITEMS = [
   'Posicionamento e nivelamento da máquina',
   'Conexões hidráulicas (entrada e saída)',
   'Conexão elétrica e aterramento',
-  'Configuração de temperatura e ciclos',
+  'Conferência de utilidades do cliente',
   'Instalação do dosador de detergente',
   'Instalação do dosador de secante',
   'Teste de ciclo completo de lavagem',
   'Verificação de vazamentos',
-  'Treinamento básico do operador',
-  'Entrega do manual do equipamento',
+  'Confirmação da data com o cliente',
+  'Registro fotográfico e aceite do cliente',
 ];
 const NOTIFS = [
-  {icon:'#e65100',bg:'#fff3e0',title:'Aprovação pendente — WR-2025-0834',desc:'Buffet Estrela · Fagor AD-48C aguarda aprovação do Gestor há 2 dias.',time:'Hoje 09:14',unread:true},
-  {icon:'#1565c0',bg:'#e3f2fd',title:'Máquina expedida — WR-2025-0832',desc:'Hospital Santa Cruz · Hobart FX em trânsito. Entrega prevista 20/06.',time:'Hoje 08:30',unread:true},
-  {icon:'#2e7d32',bg:'#e8f5e9',title:'Instalação concluída — WR-2025-0831',desc:'Colégio São Paulo · Hobart AMXT instalado e relatório assinado.',time:'Ontem 17:45',unread:true},
-  {icon:'#c62828',bg:'#ffebee',title:'Solicitação reprovada — WR-2025-0837',desc:'Colégio Beta · Gestor rejeitou. Revisar modelo e proposta comercial.',time:'Ontem 15:20',unread:true},
-  {icon:'#4527a0',bg:'#ede7f6',title:'Pedido enviado ao fornecedor — WR-2025-0838',desc:'Clínica Vida · Fagor AD-48C em preparação. Previsão 18/06.',time:'08/06 11:10',unread:false},
-  {icon:'#0e7b82',bg:'#e0f4f5',title:'Nova solicitação registrada — WR-2025-0840',desc:'Indústria ABC · Hobart CLPS50 aguarda análise do Gestor.',time:'13/06 10:05',unread:false},
+  {icon:'#e65100',bg:'#fff3e0',title:'Aprovação pendente — WR-2025-0834',desc:'Buffet Estrela · HD-80 Nova aguarda aprovação do Supervisor AS&TS há 2 dias.',time:'Hoje 09:14',unread:true},
+  {icon:'#1565c0',bg:'#e3f2fd',title:'Máquina expedida — WR-2025-0832',desc:'Hospital Santa Cruz · CCR 200 C NR-12 em trânsito. Entrega prevista 20/06.',time:'Hoje 08:30',unread:true},
+  {icon:'#2e7d32',bg:'#e8f5e9',title:'Instalação concluída — WR-2025-0831',desc:'Colégio São Paulo · Ecomax 503 instalado e relatório assinado.',time:'Ontem 17:45',unread:true},
+  {icon:'#c62828',bg:'#ffebee',title:'Solicitação reprovada — WR-2025-0837',desc:'Colégio Beta · Supervisor AS&TS rejeitou. Revisar modelo e proposta comercial.',time:'Ontem 15:20',unread:true},
+  {icon:'#4527a0',bg:'#ede7f6',title:'Pedido enviado ao fornecedor — WR-2025-0838',desc:'Clínica Vida · HD-80 Nova em preparação. Previsão 18/06.',time:'08/06 11:10',unread:false},
+  {icon:'#0e7b82',bg:'#e0f4f5',title:'Nova solicitação registrada — WR-2025-0840',desc:'Indústria ABC · CCR 260 S NR-12 aguarda análise do Supervisor AS&TS.',time:'13/06 10:05',unread:false},
 ];
 const RELATORIOS = [
   {icon:'#0e7b82',bg:'#e0f4f5',name:'Solicitações por Período',desc:'Exportar histórico completo com filtros de data, status e responsável.',meta:'Último: 13/06/2025'},
@@ -3318,16 +3603,16 @@ const DONUT_DATA = [
   {label:'Ag. aprovação',pct:7,color:'#e65100'},{label:'Reprovado',pct:4,color:'#c62828'}
 ];
 const DASH_TL = [
-  {label:'WR-0840 · Indústria ABC — Nova solicitação',meta:'Aguardando análise do Gestor',time:'Hoje 10:05',color:'#0e7b82'},
-  {label:'WR-0838 · Clínica Vida — Pedido ao fornecedor',meta:'Fagor AD-48C em preparação',time:'Hoje 09:30',color:'#4527a0'},
-  {label:'WR-0832 · Hospital Santa Cruz — Expedido',meta:'Em trânsito via TransFast',time:'Hoje 08:30',color:'#283593'},
+  {label:'WR-0840 · Indústria ABC — Nova solicitação',meta:'Aguardando análise do Supervisor AS&TS',time:'Hoje 10:05',color:'#0e7b82'},
+  {label:'WR-0838 · Clínica Vida — Pedido ao fornecedor',meta:'HD-80 Nova em preparação',time:'Hoje 09:30',color:'#4527a0'},
+  {label:'WR-0832 · Hospital Santa Cruz — Expedido',meta:'Em coleta / entrega via TransFast',time:'Hoje 08:30',color:'#283593'},
   {label:'WR-0834 · Buffet Estrela — Ag. aprovação',meta:'Pendente há 2 dias',time:'Ontem',color:'#e65100'},
   {label:'WR-0831 · Colégio São Paulo — Concluído',meta:'Relatório assinado e arquivado',time:'Ontem 17:45',color:'#2e7d32'},
 ];
 const PENDING_DATA = [
-  {code:'WR-2025-0834',client:'Buffet Estrela',model:'Fagor AD-48C',days:2},
-  {code:'WR-2025-0835',client:'Hotel Horizonte',model:'Jackson CREW',days:1},
-  {code:'WR-2025-0836',client:'Refeitório SABESP',model:'Hobart AMXT',days:1},
+  {code:'WR-2025-0834',client:'Buffet Estrela',model:'HD-80 Nova',days:2},
+  {code:'WR-2025-0835',client:'Hotel Horizonte',model:'HD-50 Remanufaturada',days:1},
+  {code:'WR-2025-0836',client:'Refeitório SABESP',model:'Ecomax 503',days:1},
 ];
 const FILTER_OPTIONS = ['Todos','Concluído','Em andamento','Ag. aprovação','Em Trânsito','Reprovado'];
 let activeFilter = 'Todos';
@@ -3374,6 +3659,10 @@ function go(id){
              || '';
     const campo03 = document.getElementById('campoPedidoNum');
     if (campo03 && num) campo03.value = num;
+
+    const fornecedorRecomendado = currentSolicitacao?.parecerGestor?.especificacao?.fornecedorSugerido || currentSolicitacao?.dadosAdm?.fornecedor || '';
+    const fornecedorAdm = document.getElementById('selectFornecedorAdm');
+    if (fornecedorAdm && fornecedorRecomendado) fornecedorAdm.value = fornecedorRecomendado;
   }
 }
 
@@ -3534,7 +3823,7 @@ function buildConfig(){
       <div class="cs-head"><svg viewBox="0 0 14 14" fill="none"><path d="M3 2h9v10H3z" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h4M5 8h4" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="cs-title">Notificações</span><span class="cs-toggle-arrow">▾</span></div>
       <div class="cs-body">
         <div class="cf-row"><div><div class="cf-label">E-mail para novas solicitações</div><div class="cf-sub">Receber notificação ao abrir nova solicitação</div></div><div class="cf-right"><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div></div>
-        <div class="cf-row"><div><div class="cf-label">Alerta de aprovação pendente</div><div class="cf-sub">Notificar após 48h sem resposta do Gestor</div></div><div class="cf-right"><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div></div>
+        <div class="cf-row"><div><div class="cf-label">Alerta de aprovação pendente</div><div class="cf-sub">Notificar após 48h sem resposta do Supervisor AS&TS</div></div><div class="cf-right"><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div></div>
         <div class="cf-row"><div><div class="cf-label">Notificação de instalação</div><div class="cf-sub">Avisar ADM ao concluir instalação</div></div><div class="cf-right"><label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label></div></div>
       </div>
     </div>
@@ -3542,7 +3831,7 @@ function buildConfig(){
       <div class="cs-head"><svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="cs-title">Usuários e Permissões</span><span class="cs-toggle-arrow">▾</span></div>
       <div class="cs-body">
         <div class="user-row"><div class="u-avatar">WT</div><div class="u-info"><div class="u-name">Welington Bastos</div><div class="u-role">ADM de Vendas</div></div><span class="u-chip chip c-done">Admin</span></div>
-        <div class="user-row"><div class="u-avatar">MS</div><div class="u-info"><div class="u-name">Marcelo Santos</div><div class="u-role">Gestor de Vendas</div></div><span class="u-chip chip c-analysis">Gestor</span></div>
+        <div class="user-row"><div class="u-avatar">MS</div><div class="u-info"><div class="u-name">Marcelo Santos</div><div class="u-role">Supervisor AS&TS</div></div><span class="u-chip chip c-analysis">Supervisor AS&TS</span></div>
         <div class="user-row"><div class="u-avatar">JP</div><div class="u-info"><div class="u-name">João P. Ferreira</div><div class="u-role">Técnico Sênior</div></div><span class="u-chip chip c-transit">Técnico</span></div>
         <div class="user-row"><div class="u-avatar">CA</div><div class="u-info"><div class="u-name">Carlos A. Lima</div><div class="u-role">Técnico</div></div><span class="u-chip chip c-transit">Técnico</span></div>
         <div class="user-row"><div class="u-avatar">RC</div><div class="u-info"><div class="u-name">Roberto Costa</div><div class="u-role">Representante Vendas</div></div><span class="u-chip chip c-pending">Vendas</span></div>
@@ -3551,7 +3840,7 @@ function buildConfig(){
     <div class="config-section">
       <div class="cs-head"><svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M7 4v3l2.5 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="cs-title">Prazos e SLA</span><span class="cs-toggle-arrow">▾</span></div>
       <div class="cs-body">
-        <div class="cf-row"><div class="cf-label">Prazo para aprovação do Gestor</div><div class="cf-right"><select class="cf-select"><option>24 horas</option><option>48 horas</option><option>72 horas</option></select></div></div>
+        <div class="cf-row"><div class="cf-label">Prazo para aprovação do Supervisor AS&TS</div><div class="cf-right"><select class="cf-select"><option>24 horas</option><option>48 horas</option><option>72 horas</option></select></div></div>
         <div class="cf-row"><div class="cf-label">Prazo para preparação do fornecedor</div><div class="cf-right"><select class="cf-select"><option>5 dias úteis</option><option>7 dias úteis</option><option>10 dias úteis</option></select></div></div>
         <div class="cf-row"><div class="cf-label">Prazo máximo para instalação</div><div class="cf-right"><select class="cf-select"><option>3 dias após entrega</option><option>5 dias após entrega</option><option>7 dias após entrega</option></select></div></div>
       </div>
@@ -3559,9 +3848,9 @@ function buildConfig(){
     <div class="config-section">
       <div class="cs-head"><svg viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 7h6M4 5h6M4 9h3.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg><span class="cs-title">Fornecedores Cadastrados</span><span class="cs-toggle-arrow">▾</span></div>
       <div class="cs-body">
-        <div class="user-row"><div class="u-avatar" style="background:#ede7f6;color:#4527a0">HB</div><div class="u-info"><div class="u-name">Hobart Brasil</div><div class="u-role">AM15 · AMXT · FX · CLPS50</div></div><span class="u-chip chip c-done">Ativo</span></div>
-        <div class="user-row"><div class="u-avatar" style="background:#e3f2fd;color:#1565c0">JW</div><div class="u-info"><div class="u-name">Jackson WWS</div><div class="u-role">CREW · CONSERVER</div></div><span class="u-chip chip c-done">Ativo</span></div>
-        <div class="user-row"><div class="u-avatar" style="background:#fff3e0;color:#e65100">FI</div><div class="u-info"><div class="u-name">Fagor Industrial</div><div class="u-role">AD-48C · AD-120C</div></div><span class="u-chip chip c-done">Ativo</span></div>
+        <div class="user-row"><div class="u-avatar" style="background:#ede7f6;color:#4527a0">HB</div><div class="u-info"><div class="u-name">Hobart Brasil</div><div class="u-role">Ecomax · CCR</div></div><span class="u-chip chip c-done">Ativo</span></div>
+        <div class="user-row"><div class="u-avatar" style="background:#e3f2fd;color:#1565c0">JW</div><div class="u-info"><div class="u-name">EBST</div><div class="u-role">HD-50 · HD-80 · HD-200</div></div><span class="u-chip chip c-done">Ativo</span></div>
+        <div class="user-row"><div class="u-avatar" style="background:#fff3e0;color:#e65100">FI</div><div class="u-info"><div class="u-name">Hobart</div><div class="u-role">CCR 200 · CCR 260</div></div><span class="u-chip chip c-done">Ativo</span></div>
       </div>
     </div>`;
 }
@@ -4000,8 +4289,8 @@ async function carregarUsuariosAdmin() {
         : '<span class="badge-inativo">Inativo</span>';
       const fornecedorCell = u.fornecedor || '—';
       tbody.innerHTML += `<tr>
-        <td><strong>${u.nome || '—'}</strong></td>
-        <td style="color:var(--text-mid)">${u.email || '—'}</td>
+        <td><strong>${u.nome || '—'}</strong><br><span style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace">@${u.username}</span></td>
+        <td style="color:var(--text-mid);font-size:12px">${u.email || '—'}</td>
         <td><span class="chip ${PERFIS[u.perfil]?.chip||''}" style="font-size:10px">${perfilLabel}</span></td>
         <td>${fornecedorCell}</td>
         <td>${statusBadge}</td>
@@ -4021,12 +4310,17 @@ function abrirModalNovoUsuario() {
   document.getElementById('modal-usuario-title').textContent = 'Novo Usuário';
   document.getElementById('admin-uid-edit').value = '';
   document.getElementById('admin-u-nome').value = '';
+  document.getElementById('admin-u-username').value = '';
+  document.getElementById('admin-u-username').disabled = false;
+  document.getElementById('admin-u-username').removeAttribute('data-original');
   document.getElementById('admin-u-email').value = '';
   document.getElementById('admin-u-email').disabled = false;
   document.getElementById('admin-u-senha').value = '';
+  document.getElementById('admin-u-senha-wrap').style.display = ''; // Mostrar senha para novo usuário
   document.getElementById('admin-u-perfil').value = 'vendas';
   document.getElementById('admin-u-fornecedor').value = 'EBST';
   document.getElementById('admin-u-erro').style.display = 'none';
+  document.getElementById('admin-u-salvar-btn').textContent = 'Criar Usuário';
   document.getElementById('admin-u-senha-wrap').style.display = '';
   document.getElementById('admin-u-reset-wrap').style.display = 'none';
   adminToggleFornecedor();
@@ -4042,19 +4336,23 @@ async function editarUsuarioAdmin(uid) {
     document.getElementById('modal-usuario-title').textContent = 'Editar Usuário';
     document.getElementById('admin-uid-edit').value = uid;
     document.getElementById('admin-u-nome').value = u.nome || '';
+    document.getElementById('admin-u-username').value = u.username || '';
+    document.getElementById('admin-u-username').disabled = false;
+    document.getElementById('admin-u-username').setAttribute('data-original', u.username || '');
     document.getElementById('admin-u-email').value = u.email || '';
-    document.getElementById('admin-u-email').disabled = true;
+    document.getElementById('admin-u-email').disabled = false;
     document.getElementById('admin-u-senha').value = '';
     document.getElementById('admin-u-perfil').value = u.perfil || 'vendas';
     document.getElementById('admin-u-fornecedor').value = u.fornecedor || 'EBST';
     document.getElementById('admin-u-erro').style.display = 'none';
-    document.getElementById('admin-u-senha-wrap').style.display = 'none';
-    document.getElementById('admin-u-reset-wrap').style.display = '';
+    document.getElementById('admin-u-senha-wrap').style.display = 'none'; // Esconder campo de senha na edição
+    document.getElementById('admin-u-reset-wrap').style.display = 'none'; // Esconder botão de reset por enquanto
     adminToggleFornecedor();
     document.getElementById('admin-u-salvar-btn').textContent = 'Salvar Alterações';
     showMod('modal-admin-usuario');
   } catch(e) {
     showToast('Erro ao carregar usuário.', 'error');
+    console.error('[ADMIN] Erro ao editar usuário:', e);
   }
 }
 
@@ -4069,6 +4367,7 @@ function adminToggleFornecedor() {
 async function salvarUsuarioAdmin() {
   const uid      = document.getElementById('admin-uid-edit').value.trim();
   const nome     = document.getElementById('admin-u-nome').value.trim();
+  const username = document.getElementById('admin-u-username').value.trim();
   const email    = document.getElementById('admin-u-email').value.trim();
   const senha    = document.getElementById('admin-u-senha').value;
   const perfil   = document.getElementById('admin-u-perfil').value;
@@ -4076,33 +4375,103 @@ async function salvarUsuarioAdmin() {
   const erroEl   = document.getElementById('admin-u-erro');
 
   erroEl.style.display = 'none';
-  if (!nome || !email) { erroEl.textContent = 'Nome e e-mail são obrigatórios.'; erroEl.style.display = ''; return; }
+
+  // ──── Validações ─────────────────────────────────────────────────
+  if (!nome || !username || !email || !perfil) {
+    erroEl.textContent = 'Nome, usuário, e-mail e perfil são obrigatórios.';
+    erroEl.style.display = '';
+    return;
+  }
+
+  // Validar formato de username (minúsculas, números, pontos)
+  if (!/^[a-z0-9.]+$/.test(username)) {
+    erroEl.textContent = 'Username deve conter apenas letras minúsculas, números e pontos.';
+    erroEl.style.display = '';
+    return;
+  }
+
+  // Validar email
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    erroEl.textContent = 'E-mail inválido.';
+    erroEl.style.display = '';
+    return;
+  }
 
   try {
     const btn = document.getElementById('admin-u-salvar-btn');
-    btn.disabled = true; btn.textContent = 'Salvando...';
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
 
     if (!uid) {
-      // Criar novo usuário via Firebase Auth (requer Admin SDK — aqui salvamos no Firestore como pendente)
-      if (!senha || senha.length < 6) { erroEl.textContent = 'Senha deve ter no mínimo 6 caracteres.'; erroEl.style.display = ''; btn.disabled=false; btn.textContent='Criar Usuário'; return; }
-      // Cria usuário via Auth
-      const cred = await firebase.auth().createUserWithEmailAndPassword(email, senha);
-      await cred.user.updateProfile({ displayName: nome });
-      await db.collection('usuarios').doc(cred.user.uid).set({
-        nome, email, perfil, fornecedor, ativo: true, criadoEm: firebase.firestore.FieldValue.serverTimestamp(), criadoPor: currentUser?.uid || 'admin'
+      // ──── CRIAR NOVO USUÁRIO ──────────────────────────────────────
+      if (!senha || senha.length < 6) {
+        erroEl.textContent = 'Senha deve ter no mínimo 6 caracteres.';
+        erroEl.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Criar Usuário';
+        return;
+      }
+
+      // Verificar se username já existe
+      const existeUsername = await db.collection('usuarios').where('username', '==', username).limit(1).get();
+      if (!existeUsername.empty) {
+        erroEl.textContent = 'Username já está em uso.';
+        erroEl.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Criar Usuário';
+        return;
+      }
+
+      // Gerar hash de senha com bcryptjs
+      const senhaHash = await bcrypt.hash(senha, 10);
+
+      // Criar documento do usuário no Firestore
+      const novoUsuarioRef = db.collection('usuarios').doc();
+      await novoUsuarioRef.set({
+        username,
+        nome,
+        email,
+        senhaHash, // Armazenar apenas o hash, nunca a senha
+        perfil,
+        fornecedor: fornecedor || null,
+        ativo: true,
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+        criadoPor: currentUser?.uid || 'admin'
       });
-      showToast('Usuário criado com sucesso!', 'success');
+
+      showToast('✓ Usuário criado com sucesso!', 'success');
     } else {
-      // Editar existente (apenas dados no Firestore; senha via reset)
-      await db.collection('usuarios').doc(uid).update({ nome, perfil, fornecedor });
-      showToast('Usuário atualizado!', 'success');
+      // ──── EDITAR USUÁRIO EXISTENTE ────────────────────────────────
+      const updateData = { nome, perfil, email };
+
+      // Se tentou mudar username, validar
+      if (document.getElementById('admin-u-username').getAttribute('data-original') !== username) {
+        const existeUsername = await db.collection('usuarios').where('username', '==', username).limit(1).get();
+        if (!existeUsername.empty) {
+          erroEl.textContent = 'Username já está em uso.';
+          erroEl.style.display = '';
+          btn.disabled = false;
+          btn.textContent = 'Salvar';
+          return;
+        }
+        updateData.username = username;
+      }
+
+      // Se mudou fornecedor
+      if (fornecedor) updateData.fornecedor = fornecedor;
+
+      await db.collection('usuarios').doc(uid).update(updateData);
+      showToast('✓ Usuário atualizado!', 'success');
     }
 
     closeMod('modal-admin-usuario');
     carregarUsuariosAdmin();
     btn.disabled = false;
   } catch(e) {
-    const erros = { 'auth/email-already-in-use':'E-mail já cadastrado.', 'auth/invalid-email':'E-mail inválido.', 'auth/weak-password':'Senha muito fraca.' };
+    const erros = {
+      'permission-denied': 'Sem permissão para realizar esta ação.',
+      'invalid-argument': 'Dados inválidos.'
+    };
     erroEl.textContent = erros[e.code] || ('Erro: ' + e.message);
     erroEl.style.display = '';
     document.getElementById('admin-u-salvar-btn').disabled = false;
@@ -4124,13 +4493,25 @@ async function toggleAtivoUsuario(uid, atualmenteAtivo) {
 }
 
 async function resetarSenhaUsuario() {
-  const email = document.getElementById('admin-u-email').value.trim();
-  if (!email) { showToast('E-mail não encontrado.', 'error'); return; }
+  const uid = document.getElementById('admin-uid-edit').value.trim();
+  if (!uid) { showToast('Nenhum usuário selecionado.', 'error'); return; }
+  
+  // Gerar senha temporária aleatória
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let novaSenha = '';
+  for (let i = 0; i < 8; i++) novaSenha += chars.charAt(Math.floor(Math.random() * chars.length));
+  
+  if (!confirm('Será gerada uma nova senha temporária para este usuário:\n\nNova senha: ' + novaSenha + '\n\nAnote esta senha! Ela não será exibida novamente.\nDeseja continuar?')) return;
+  
   try {
-    await firebase.auth().sendPasswordResetEmail(email);
-    showToast('Link de reset enviado para ' + email, 'success');
+    const senhaHash = await bcrypt.hash(novaSenha, 10);
+    await db.collection('usuarios').doc(uid).update({ senhaHash });
+    showToast('✓ Senha resetada! Nova senha temporária: ' + novaSenha, 'success');
+    
+    // Mostrar a senha num prompt para o admin copiar
+    prompt('Senha temporária gerada (copie e envie ao usuário):', novaSenha);
   } catch(e) {
-    showToast('Erro ao enviar reset: ' + e.message, 'error');
+    showToast('Erro ao resetar senha: ' + e.message, 'error');
   }
 }
 
@@ -4383,6 +4764,7 @@ function init(){
   buildConfig();
   buildDashboard();
   buildChecklist();
+  popularModelosSolicitacao(DEFAULT_MACHINE_MODELS);
   setBreadcrumb('Início');
 
   // Inicializa Firebase + autenticação
